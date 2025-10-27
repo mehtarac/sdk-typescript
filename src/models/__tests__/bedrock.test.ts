@@ -537,19 +537,15 @@ describe('BedrockModel', () => {
         type: 'modelContentBlockDeltaEvent',
         delta: {
           type: 'reasoningDelta',
-          reasoningContent: {
-            text: 'thinking...',
-            signature: 'sig123',
-          },
+          text: 'thinking...',
+          signature: 'sig123',
         },
       })
       expect(events[3]).toStrictEqual({
         type: 'modelContentBlockDeltaEvent',
         delta: {
           type: 'reasoningDelta',
-          reasoningContent: {
-            redactedContent: new Uint8Array(1),
-          },
+          redactedContent: new Uint8Array(1),
         },
       })
     })
@@ -586,8 +582,8 @@ describe('BedrockModel', () => {
       )
       expect(reasoningDelta).toBeDefined()
       if (reasoningDelta?.type === 'modelContentBlockDeltaEvent' && reasoningDelta.delta.type === 'reasoningDelta') {
-        expect(reasoningDelta.delta.reasoningContent.text).toBe('thinking...')
-        expect(reasoningDelta.delta.reasoningContent.signature).toBeUndefined()
+        expect(reasoningDelta.delta.text).toBe('thinking...')
+        expect(reasoningDelta.delta.signature).toBeUndefined()
       }
     })
 
@@ -616,8 +612,8 @@ describe('BedrockModel', () => {
       )
       expect(reasoningDelta).toBeDefined()
       if (reasoningDelta?.type === 'modelContentBlockDeltaEvent' && reasoningDelta.delta.type === 'reasoningDelta') {
-        expect(reasoningDelta.delta.reasoningContent.text).toBeUndefined()
-        expect(reasoningDelta.delta.reasoningContent.signature).toBe('sig123')
+        expect(reasoningDelta.delta.text).toBeUndefined()
+        expect(reasoningDelta.delta.signature).toBe('sig123')
       }
     })
 

@@ -51,7 +51,7 @@ export type {
   ModelContentBlockStartEvent,
   TextDelta,
   ToolUseInputDelta,
-  ReasoningDelta,
+  ReasoningContentDelta,
   ContentBlockDelta,
   ModelContentBlockDeltaEvent,
   ModelContentBlockStopEvent,

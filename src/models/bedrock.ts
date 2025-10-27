@@ -26,10 +26,9 @@ import {
   ContentBlockDelta,
   type ToolConfiguration,
 } from '@aws-sdk/client-bedrock-runtime'
-import type { Model, BaseModelConfig, StreamOptions } from '../models/model'
-import { aggregateStream } from '../models/model'
+import { Model, type BaseModelConfig, type StreamOptions } from '../models/model'
 import type { Message, ContentBlock } from '../types/messages'
-import type { ModelStreamEvent, ReasoningDelta, Usage } from '../models/streaming'
+import type { ModelStreamEvent, ReasoningContentDelta, Usage } from '../models/streaming'
 import type { JSONValue } from '../types/json'
 import { ContextWindowOverflowError } from '../errors'
 import { ensureDefined } from '../types/validation'
@@ -184,7 +183,7 @@ export interface BedrockModelOptions extends BedrockModelConfig {
  * }
  * ```
  */
-export class BedrockModel implements Model<BedrockModelConfig, BedrockRuntimeClientConfig> {
+export class BedrockModel extends Model<BedrockModelConfig, BedrockRuntimeClientConfig> {
   private _config: BedrockModelConfig
   private _client: BedrockRuntimeClient
 
@@ -219,6 +218,7 @@ export class BedrockModel implements Model<BedrockModelConfig, BedrockRuntimeCli
    * ```
    */
   constructor(options?: BedrockModelOptions) {
+    super()
     const { region, clientConfig, ...modelConfig } = options ?? {}
 
     // Initialize model config with default model ID if not provided
@@ -578,14 +578,12 @@ export class BedrockModel implements Model<BedrockModelConfig, BedrockRuntimeCli
           case 'reasoningContent': {
             const reasoning = ensureDefined(delta.reasoningContent, 'delta.reasoningContent')
 
-            const reasoningDelta: ReasoningDelta = {
+            const reasoningDelta: ReasoningContentDelta = {
               type: 'reasoningDelta',
-              reasoningContent: {
-                ...(reasoning.text && { text: reasoning.text }),
-                ...(reasoning.signature && { signature: reasoning.signature }),
-                ...(reasoning.redactedContent && { redactedContent: reasoning.redactedContent }),
-              },
             }
+            if (reasoning.text) reasoningDelta.text = reasoning.text
+            if (reasoning.signature) reasoningDelta.signature = reasoning.signature
+            if (reasoning.redactedContent) reasoningDelta.redactedContent = reasoning.redactedContent
 
             event.delta = reasoningDelta
             break
@@ -698,26 +696,5 @@ export class BedrockModel implements Model<BedrockModelConfig, BedrockRuntimeCli
     }
 
     return events
-  }
-
-  /**
-   * Streams a conversation with aggregated content blocks and messages.
-   * Returns an async iterable that yields streaming events, complete content blocks, and complete messages.
-   *
-   * This method enhances the basic stream() by collecting streaming events into complete
-   * ContentBlock and Message objects, which are needed by the agentic loop for tool execution
-   * and conversation management.
-   *
-   * @param messages - Array of conversation messages
-   * @param options - Optional streaming configuration
-   * @returns Async iterable yielding ModelStreamEvent | ContentBlock | Message
-   *
-   * @throws \{StreamAggregationError\} When stream ends unexpectedly or contains malformed events
-   */
-  async *streamAggregated(
-    messages: Message[],
-    options?: StreamOptions
-  ): AsyncIterable<ModelStreamEvent | ContentBlock | Message> {
-    yield* aggregateStream(() => this.stream(messages, options))
   }
 }

@@ -18,6 +18,27 @@ async function collectEvents(stream: AsyncIterable<ModelStreamEvent>): Promise<M
   return events
 }
 
+/**
+ * Helper function to collect yielded items and get return value from an async generator.
+ */
+async function collectAggregated<T, R>(generator: AsyncGenerator<T, R, never>): Promise<{ items: T[]; result: R }> {
+  const items: T[] = []
+  let done = false
+  let result: R | undefined
+
+  while (!done) {
+    const { value, done: isDone } = await generator.next()
+    done = isDone ?? false
+    if (!done) {
+      items.push(value as T)
+    } else {
+      result = value as R
+    }
+  }
+
+  return { items, result: result as R }
+}
+
 // Check credentials at module level so skipIf can use it
 let hasCredentials = false
 try {
@@ -236,7 +257,7 @@ describe.skipIf(!hasCredentials)('BedrockModel Integration Tests', () => {
   })
 
   describe('Stream Aggregation', () => {
-    it.concurrent('streamAggregated yields events, content blocks, and complete message', async () => {
+    it.concurrent('streamAggregated yields events, content blocks, and returns complete message', async () => {
       const provider = new BedrockModel({
         maxTokens: 100,
       })
@@ -249,15 +270,11 @@ describe.skipIf(!hasCredentials)('BedrockModel Integration Tests', () => {
         },
       ]
 
-      const items = []
-      for await (const item of provider.streamAggregated(messages)) {
-        items.push(item)
-      }
+      const { items, result } = await collectAggregated(provider.streamAggregated(messages))
 
       // Count different types using switch-case pattern
       let streamEventCount = 0
       let contentBlockCount = 0
-      let messageCount = 0
 
       for (const item of items) {
         switch (item.type) {
@@ -274,21 +291,16 @@ describe.skipIf(!hasCredentials)('BedrockModel Integration Tests', () => {
           case 'reasoningBlock':
             contentBlockCount++
             break
-          case 'message':
-            messageCount++
-            break
         }
       }
 
-      // Verify we got all three types
+      // Verify we got events and content blocks
       expect(streamEventCount).toBeGreaterThan(0)
       expect(contentBlockCount).toBe(1)
-      expect(messageCount).toBe(1)
 
-      // Verify the complete message structure
-      const message = items.find((i) => i.type === 'message')
-      expect(message).toBeDefined()
-      expect(message).toMatchObject({
+      // Verify the complete message structure is returned
+      expect(result).toBeDefined()
+      expect(result).toMatchObject({
         type: 'message',
         role: 'assistant',
         content: expect.arrayContaining([

@@ -206,7 +206,7 @@ export interface ReasoningContentDelta {
   /**
    * Discriminator for reasoning delta.
    */
-  type: 'reasoningDelta'
+  type: 'reasoningContentDelta'
 
   /**
    * Incremental reasoning text.

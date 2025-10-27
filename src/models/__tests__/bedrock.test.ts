@@ -18,6 +18,27 @@ async function collectEvents(stream: AsyncIterable<ModelStreamEvent>): Promise<M
 }
 
 /**
+ * Helper function to collect yielded items and get return value from an async generator.
+ */
+async function collectAggregated<T, R>(generator: AsyncGenerator<T, R, never>): Promise<{ items: T[]; result: R }> {
+  const items: T[] = []
+  let done = false
+  let result: R | undefined
+
+  while (!done) {
+    const { value, done: isDone } = await generator.next()
+    done = isDone ?? false
+    if (!done) {
+      items.push(value as T)
+    } else {
+      result = value as R
+    }
+  }
+
+  return { items, result: result as R }
+}
+
+/**
  * Helper function to setup mock send with custom stream generator.
  */
 function setupMockSend(streamGenerator: () => AsyncGenerator<unknown>): void {
@@ -536,7 +557,7 @@ describe('BedrockModel', () => {
       expect(events[2]).toStrictEqual({
         type: 'modelContentBlockDeltaEvent',
         delta: {
-          type: 'reasoningDelta',
+          type: 'reasoningContentDelta',
           text: 'thinking...',
           signature: 'sig123',
         },
@@ -544,7 +565,7 @@ describe('BedrockModel', () => {
       expect(events[3]).toStrictEqual({
         type: 'modelContentBlockDeltaEvent',
         delta: {
-          type: 'reasoningDelta',
+          type: 'reasoningContentDelta',
           redactedContent: new Uint8Array(1),
         },
       })
@@ -578,10 +599,13 @@ describe('BedrockModel', () => {
       const events = await collectEvents(provider.stream(messages))
 
       const reasoningDelta = events.find(
-        (e) => e.type === 'modelContentBlockDeltaEvent' && e.delta.type === 'reasoningDelta'
+        (e) => e.type === 'modelContentBlockDeltaEvent' && e.delta.type === 'reasoningContentDelta'
       )
       expect(reasoningDelta).toBeDefined()
-      if (reasoningDelta?.type === 'modelContentBlockDeltaEvent' && reasoningDelta.delta.type === 'reasoningDelta') {
+      if (
+        reasoningDelta?.type === 'modelContentBlockDeltaEvent' &&
+        reasoningDelta.delta.type === 'reasoningContentDelta'
+      ) {
         expect(reasoningDelta.delta.text).toBe('thinking...')
         expect(reasoningDelta.delta.signature).toBeUndefined()
       }
@@ -608,10 +632,13 @@ describe('BedrockModel', () => {
       const events = await collectEvents(provider.stream(messages))
 
       const reasoningDelta = events.find(
-        (e) => e.type === 'modelContentBlockDeltaEvent' && e.delta.type === 'reasoningDelta'
+        (e) => e.type === 'modelContentBlockDeltaEvent' && e.delta.type === 'reasoningContentDelta'
       )
       expect(reasoningDelta).toBeDefined()
-      if (reasoningDelta?.type === 'modelContentBlockDeltaEvent' && reasoningDelta.delta.type === 'reasoningDelta') {
+      if (
+        reasoningDelta?.type === 'modelContentBlockDeltaEvent' &&
+        reasoningDelta.delta.type === 'reasoningContentDelta'
+      ) {
         expect(reasoningDelta.delta.text).toBeUndefined()
         expect(reasoningDelta.delta.signature).toBe('sig123')
       }
@@ -734,7 +761,7 @@ describe('BedrockModel', () => {
 
   describe('streamAggregated', () => {
     describe('when streaming a simple text message', () => {
-      it('yields original events plus aggregated content block and message with type discriminators', async () => {
+      it('yields original events plus aggregated content block and returns final message', async () => {
         setupMockSend(async function* () {
           yield { messageStart: { role: 'assistant' } }
           yield { contentBlockStart: { contentBlockIndex: 0 } }
@@ -747,15 +774,11 @@ describe('BedrockModel', () => {
         const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { items, result } = await collectAggregated(provider.streamAggregated(messages))
 
-        // Test switch-case handling with type discriminator
+        // Test that we got all the events and blocks
         let streamEventCount = 0
         let contentBlockCount = 0
-        let messageCount = 0
 
         for (const item of items) {
           switch (item.type) {
@@ -772,20 +795,18 @@ describe('BedrockModel', () => {
             case 'reasoningBlock':
               contentBlockCount++
               break
-            case 'message':
-              messageCount++
-              expect(item).toEqual({
-                type: 'message',
-                role: 'assistant',
-                content: [{ type: 'textBlock', text: 'Hello' }],
-              })
-              break
           }
         }
 
-        expect(streamEventCount).toBe(6)
+        expect(streamEventCount).toBe(5)
         expect(contentBlockCount).toBe(1)
-        expect(messageCount).toBe(1)
+
+        // Verify the returned message
+        expect(result).toEqual({
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'textBlock', text: 'Hello' }],
+        })
       })
     })
 
@@ -806,10 +827,7 @@ describe('BedrockModel', () => {
         const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { items, result } = await collectAggregated(provider.streamAggregated(messages))
 
         const contentBlocks = items.filter(
           (i) => i.type === 'textBlock' || i.type === 'toolUseBlock' || i.type === 'reasoningBlock'
@@ -819,8 +837,7 @@ describe('BedrockModel', () => {
           { type: 'textBlock', text: 'Second' },
         ])
 
-        const message = items.find((i) => i.type === 'message')
-        expect(message).toEqual({
+        expect(result).toEqual({
           type: 'message',
           role: 'assistant',
           content: [
@@ -853,10 +870,7 @@ describe('BedrockModel', () => {
           { type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Calculate 5+3' }] },
         ]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { items } = await collectAggregated(provider.streamAggregated(messages))
 
         const toolBlock = items.find((i) => i.type === 'toolUseBlock')
         expect(toolBlock).toEqual({
@@ -889,10 +903,7 @@ describe('BedrockModel', () => {
         const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { items } = await collectAggregated(provider.streamAggregated(messages))
 
         const reasoningBlock = items.find((i) => i.type === 'reasoningBlock')
         expect(reasoningBlock).toEqual({
@@ -927,13 +938,9 @@ describe('BedrockModel', () => {
         const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { result } = await collectAggregated(provider.streamAggregated(messages))
 
-        const message = items.find((i) => i.type === 'message')
-        expect(message).toEqual({
+        expect(result).toEqual({
           type: 'message',
           role: 'assistant',
           content: [
@@ -958,10 +965,7 @@ describe('BedrockModel', () => {
         const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { items } = await collectAggregated(provider.streamAggregated(messages))
 
         const textBlock = items.find((i) => i.type === 'textBlock')
         expect(textBlock).toEqual({
@@ -978,7 +982,6 @@ describe('BedrockModel', () => {
           yield { contentBlockStart: { contentBlockIndex: 0 } }
           yield { contentBlockDelta: { delta: { text: 'Hi' }, contentBlockIndex: 0 } }
           yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { messageStop: { stopReason: 'end_turn' } }
           yield {
             metadata: {
               usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15, cacheReadInputTokens: 8 },
@@ -986,15 +989,13 @@ describe('BedrockModel', () => {
               trace: { guardrail: { action: 'NONE' } },
             },
           }
+          yield { messageStop: { stopReason: 'end_turn' } }
         })
 
         const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
-        const items = []
-        for await (const item of provider.streamAggregated(messages)) {
-          items.push(item)
-        }
+        const { items } = await collectAggregated(provider.streamAggregated(messages))
 
         const metadataEvent = items.find((i) => i.type === 'modelMetadataEvent')
         expect(metadataEvent).toEqual({

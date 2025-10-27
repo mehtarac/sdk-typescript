@@ -579,7 +579,7 @@ export class BedrockModel extends Model<BedrockModelConfig, BedrockRuntimeClient
             const reasoning = ensureDefined(delta.reasoningContent, 'delta.reasoningContent')
 
             const reasoningDelta: ReasoningContentDelta = {
-              type: 'reasoningDelta',
+              type: 'reasoningContentDelta',
             }
             if (reasoning.text) reasoningDelta.text = reasoning.text
             if (reasoning.signature) reasoningDelta.signature = reasoning.signature

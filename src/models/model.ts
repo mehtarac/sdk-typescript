@@ -76,29 +76,27 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
 
   /**
    * Streams a conversation with aggregated content blocks and messages.
-   * Returns an async iterable that yields streaming events, complete content blocks, and complete messages.
+   * Returns an async generator that yields streaming events and content blocks, and returns the final message.
    *
    * This method enhances the basic stream() by collecting streaming events into complete
    * ContentBlock and Message objects, which are needed by the agentic loop for tool execution
    * and conversation management.
    *
-   * The method yields a union of three types (all with discriminator `type` field):
+   * The method yields:
    * - ModelStreamEvent - Original streaming events (passed through)
    * - ContentBlock - Complete content block (emitted when block completes)
-   * - Message - Complete message (emitted when message completes)
    *
-   * All returned types support type-safe switch-case handling via the `type` discriminator field.
+   * The method returns:
+   * - Message - Complete message (returned when message completes)
    *
    * @param messages - Array of conversation messages
    * @param options - Optional streaming configuration
-   * @returns Async iterable yielding ModelStreamEvent | ContentBlock | Message
-   *
-   * @throws \{StreamAggregationError\} When stream ends unexpectedly or contains malformed events
+   * @returns Async generator yielding ModelStreamEvent | ContentBlock and returning Message
    */
   async *streamAggregated(
     messages: Message[],
     options?: StreamOptions
-  ): AsyncIterable<ModelStreamEvent | ContentBlock | Message> {
+  ): AsyncGenerator<ModelStreamEvent | ContentBlock, Message, never> {
     // State maintained in closure
     let messageRole: Role | null = null
     const contentBlocks: ContentBlock[] = []
@@ -106,7 +104,7 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
     let accumulatedToolInput = ''
     let toolName = ''
     let toolUseId = ''
-    const accumulatedReasoning: {
+    let accumulatedReasoning: {
       text?: string
       signature?: string
       redactedContent?: Uint8Array
@@ -131,9 +129,7 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
             accumulatedText = ''
           }
           // Reset reasoning accumulator
-          Object.keys(accumulatedReasoning).forEach(
-            (key) => delete accumulatedReasoning[key as keyof typeof accumulatedReasoning]
-          )
+          accumulatedReasoning = {}
           break
 
         case 'modelContentBlockDeltaEvent':
@@ -144,7 +140,7 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
             case 'toolUseInputDelta':
               accumulatedToolInput += event.delta.input
               break
-            case 'reasoningDelta':
+            case 'reasoningContentDelta':
               if (event.delta.text) accumulatedReasoning.text = (accumulatedReasoning.text ?? '') + event.delta.text
               if (event.delta.signature) accumulatedReasoning.signature = event.delta.signature
               if (event.delta.redactedContent) accumulatedReasoning.redactedContent = event.delta.redactedContent
@@ -181,22 +177,27 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
         }
 
         case 'modelMessageStopEvent':
-          // Emit complete Message
+          // Complete message - will be returned at the end
           if (messageRole) {
             const message: Message = {
               type: 'message',
               role: messageRole,
               content: [...contentBlocks],
             }
-            yield message
-            messageRole = null
+            return message
           }
           break
 
         case 'modelMetadataEvent':
           // Pass through - already yielded above
           break
+
+        default:
+          break
       }
     }
+
+    // If we exit the loop without returning a message, throw an error
+    throw new Error('Stream ended without completing a message')
   }
 }

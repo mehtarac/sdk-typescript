@@ -20,6 +20,20 @@ export interface Message {
    * Array of content blocks that make up this message.
    */
   content: ContentBlock[]
+
+  /**
+   * The reason why the model stopped generating content.
+   */
+  stopReason?: StopReason
+
+  /**
+   * Token usage statistics for this message.
+   */
+  usage?: {
+    inputTokens: number
+    outputTokens: number
+    totalTokens: number
+  }
 }
 
 /**

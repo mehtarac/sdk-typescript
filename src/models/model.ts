@@ -1,4 +1,4 @@
-import type { Message, ContentBlock, Role } from '../types/messages'
+import type { Message, ContentBlock, Role, StopReason } from '../types/messages'
 import type { ToolSpec, ToolChoice } from '../tools/types'
 import type { ModelStreamEvent } from './streaming'
 
@@ -45,10 +45,8 @@ export interface StreamOptions {
  * responses using async iterables.
  *
  * @typeParam T - Model configuration type extending BaseModelConfig
- * @typeParam _C - Client configuration type for provider-specific client setup (used by implementations)
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export abstract class Model<T extends BaseModelConfig, _C = unknown> {
+export abstract class Model<T extends BaseModelConfig> {
   /**
    * Updates the model configuration.
    * Merges the provided configuration with existing settings.
@@ -109,6 +107,14 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
       signature?: string
       redactedContent?: Uint8Array
     } = {}
+    let stopReason: StopReason | undefined
+    let usage:
+      | {
+          inputTokens: number
+          outputTokens: number
+          totalTokens: number
+        }
+      | undefined
 
     for await (const event of this.stream(messages, options)) {
       yield event // Pass through immediately
@@ -177,6 +183,8 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
         }
 
         case 'modelMessageStopEvent':
+          // Capture stop reason
+          stopReason = event.stopReason
           // Complete message - will be returned at the end
           if (messageRole) {
             const message: Message = {
@@ -184,12 +192,17 @@ export abstract class Model<T extends BaseModelConfig, _C = unknown> {
               role: messageRole,
               content: [...contentBlocks],
             }
+            if (stopReason) message.stopReason = stopReason
+            if (usage) message.usage = usage
             return message
           }
           break
 
         case 'modelMetadataEvent':
-          // Pass through - already yielded above
+          // Capture usage metadata
+          if (event.usage) {
+            usage = event.usage
+          }
           break
 
         default:

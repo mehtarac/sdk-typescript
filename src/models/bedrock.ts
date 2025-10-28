@@ -183,7 +183,7 @@ export interface BedrockModelOptions extends BedrockModelConfig {
  * }
  * ```
  */
-export class BedrockModel extends Model<BedrockModelConfig, BedrockRuntimeClientConfig> {
+export class BedrockModel extends Model<BedrockModelConfig> {
   private _config: BedrockModelConfig
   private _client: BedrockRuntimeClient
 

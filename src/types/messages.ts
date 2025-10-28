@@ -1,6 +1,5 @@
 import type { JSONValue } from './json'
 import type { ToolResultContent } from '../tools/types'
-import type { Usage } from '../models/streaming'
 
 /**
  * A message in a conversation between user and assistant.
@@ -21,16 +20,6 @@ export interface Message {
    * Array of content blocks that make up this message.
    */
   content: ContentBlock[]
-
-  /**
-   * The reason why the model stopped generating content.
-   */
-  stopReason?: StopReason
-
-  /**
-   * Token usage statistics for this message.
-   */
-  usage?: Usage
 }
 
 /**

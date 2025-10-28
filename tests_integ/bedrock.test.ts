@@ -6,6 +6,7 @@ import type { Message } from '../src/types/messages'
 import type { ToolSpec } from '../src/tools/types'
 import type { ModelStreamEvent } from '../src/models/streaming'
 import { ValidationException } from '@aws-sdk/client-bedrock-runtime'
+import { collectAggregated } from '../src/models/test-fixtures/model-test-helpers'
 
 /**
  * Helper function to collect all events from a stream.
@@ -16,27 +17,6 @@ async function collectEvents(stream: AsyncIterable<ModelStreamEvent>): Promise<M
     events.push(event)
   }
   return events
-}
-
-/**
- * Helper function to collect yielded items and get return value from an async generator.
- */
-async function collectAggregated<T, R>(generator: AsyncGenerator<T, R, never>): Promise<{ items: T[]; result: R }> {
-  const items: T[] = []
-  let done = false
-  let result: R | undefined
-
-  while (!done) {
-    const { value, done: isDone } = await generator.next()
-    done = isDone ?? false
-    if (!done) {
-      items.push(value as T)
-    } else {
-      result = value as R
-    }
-  }
-
-  return { items, result: result as R }
 }
 
 // Check credentials at module level so skipIf can use it

@@ -1,64 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { Model } from '../model'
-import type { Message, ContentBlock } from '../../types/messages'
-import type { ModelStreamEvent } from '../streaming'
-import type { BaseModelConfig, StreamOptions } from '../model'
-
-/**
- * Test model provider that returns a predefined stream of events.
- */
-class TestModelProvider extends Model<BaseModelConfig> {
-  private eventGenerator: (() => AsyncGenerator<ModelStreamEvent>) | undefined
-  private config: BaseModelConfig = { modelId: 'test-model' }
-
-  constructor(eventGenerator?: () => AsyncGenerator<ModelStreamEvent>) {
-    super()
-    this.eventGenerator = eventGenerator
-  }
-
-  setEventGenerator(eventGenerator: () => AsyncGenerator<ModelStreamEvent>): void {
-    this.eventGenerator = eventGenerator
-  }
-
-  updateConfig(modelConfig: BaseModelConfig): void {
-    this.config = { ...this.config, ...modelConfig }
-  }
-
-  getConfig(): BaseModelConfig {
-    return this.config
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async *stream(_messages: Message[], _options?: StreamOptions): AsyncGenerator<ModelStreamEvent> {
-    if (!this.eventGenerator) {
-      throw new Error('Event generator not set')
-    }
-    yield* this.eventGenerator()
-  }
-}
-
-/**
- * Helper function to collect events and message from an async generator properly.
- */
-async function collectAggregated(
-  generator: AsyncGenerator<ModelStreamEvent | ContentBlock, Message, never>
-): Promise<{ items: (ModelStreamEvent | ContentBlock)[]; result: Message }> {
-  const items: (ModelStreamEvent | ContentBlock)[] = []
-  let done = false
-  let result: Message | undefined
-
-  while (!done) {
-    const { value, done: isDone } = await generator.next()
-    done = isDone ?? false
-    if (!done) {
-      items.push(value as ModelStreamEvent | ContentBlock)
-    } else {
-      result = value as Message
-    }
-  }
-
-  return { items, result: result! }
-}
+import type { Message } from '../../types/messages'
+import { TestModelProvider, collectAggregated } from '../test-fixtures/model-test-helpers'
 
 describe('Model', () => {
   describe('streamAggregated', () => {
@@ -114,7 +56,6 @@ describe('Model', () => {
           type: 'message',
           role: 'assistant',
           content: [{ type: 'textBlock', text: 'Hello' }],
-          stopReason: 'endTurn',
         })
       })
     })
@@ -163,7 +104,6 @@ describe('Model', () => {
             { type: 'textBlock', text: 'First' },
             { type: 'textBlock', text: 'Second' },
           ],
-          stopReason: 'endTurn',
         })
       })
     })
@@ -362,60 +302,6 @@ describe('Model', () => {
           { type: 'toolUseBlock', toolUseId: 'tool1', name: 'get_weather', input: { city: 'Paris' } },
           { type: 'reasoningBlock', text: 'Reasoning', signature: 'sig1' },
         ])
-      })
-    })
-
-    describe('stop reasons', () => {
-      it('includes stop reason in returned message', async () => {
-        const provider = new TestModelProvider(async function* () {
-          yield { type: 'modelMessageStartEvent', role: 'assistant' }
-          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
-          yield {
-            type: 'modelContentBlockDeltaEvent',
-            delta: { type: 'textDelta', text: 'Test' },
-            contentBlockIndex: 0,
-          }
-          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
-          yield { type: 'modelMessageStopEvent', stopReason: 'maxTokens' }
-          yield {
-            type: 'modelMetadataEvent',
-            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
-          }
-        })
-
-        const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
-
-        const { result } = await collectAggregated(provider.streamAggregated(messages))
-
-        expect(result.stopReason).toBe('maxTokens')
-      })
-
-      it('includes usage metadata in returned message', async () => {
-        const provider = new TestModelProvider(async function* () {
-          yield { type: 'modelMessageStartEvent', role: 'assistant' }
-          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
-          yield {
-            type: 'modelContentBlockDeltaEvent',
-            delta: { type: 'textDelta', text: 'Test' },
-            contentBlockIndex: 0,
-          }
-          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
-          yield {
-            type: 'modelMetadataEvent',
-            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
-          }
-          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
-        })
-
-        const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
-
-        const { result } = await collectAggregated(provider.streamAggregated(messages))
-
-        expect(result.usage).toEqual({
-          inputTokens: 10,
-          outputTokens: 5,
-          totalTokens: 15,
-        })
       })
     })
   })

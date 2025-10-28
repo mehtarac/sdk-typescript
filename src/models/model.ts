@@ -1,6 +1,6 @@
-import type { Message, ContentBlock, Role, StopReason, SystemPrompt } from '../types/messages'
+import type { Message, ContentBlock, Role, SystemPrompt } from '../types/messages'
 import type { ToolSpec, ToolChoice } from '../tools/types'
-import type { ModelStreamEvent, Usage } from './streaming'
+import type { ModelStreamEvent } from './streaming'
 
 /**
  * Base configuration interface for all model providers.
@@ -108,8 +108,6 @@ export abstract class Model<T extends BaseModelConfig> {
       signature?: string
       redactedContent?: Uint8Array
     } = {}
-    let stopReason: StopReason | undefined
-    let usage: Usage | undefined
 
     for await (const event of this.stream(messages, options)) {
       yield event // Pass through immediately
@@ -178,8 +176,6 @@ export abstract class Model<T extends BaseModelConfig> {
         }
 
         case 'modelMessageStopEvent':
-          // Capture stop reason
-          stopReason = event.stopReason
           // Complete message - will be returned at the end
           if (messageRole) {
             const message: Message = {
@@ -187,16 +183,7 @@ export abstract class Model<T extends BaseModelConfig> {
               role: messageRole,
               content: [...contentBlocks],
             }
-            if (stopReason) message.stopReason = stopReason
-            if (usage) message.usage = usage
             return message
-          }
-          break
-
-        case 'modelMetadataEvent':
-          // Capture usage metadata
-          if (event.usage) {
-            usage = event.usage
           }
           break
 

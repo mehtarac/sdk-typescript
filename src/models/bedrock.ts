@@ -350,18 +350,26 @@ export class BedrockModel extends Model<BedrockModelConfig> {
     }
 
     // Add system prompt with optional caching
-    if (options?.systemPrompt || this._config.cachePrompt) {
-      const system: BedrockContentBlock[] = []
+    if (options?.systemPrompt !== undefined) {
+      if (typeof options.systemPrompt === 'string') {
+        // String path: apply cachePrompt config if set
+        const system: BedrockContentBlock[] = [{ text: options.systemPrompt }]
 
-      if (options?.systemPrompt) {
-        system.push({ text: options.systemPrompt })
+        if (this._config.cachePrompt) {
+          system.push({ cachePoint: { type: this._config.cachePrompt as 'default' } })
+        }
+
+        request.system = system
+      } else if (options.systemPrompt.length > 0) {
+        // Array path: use as-is, but warn if cachePrompt config is also set
+        if (this._config.cachePrompt) {
+          console.warn(
+            'cachePrompt config is ignored when systemPrompt is an array. Use explicit cache points in the array instead.'
+          )
+        }
+
+        request.system = options.systemPrompt.map((block) => this._formatContentBlock(block))
       }
-
-      if (this._config.cachePrompt) {
-        system.push({ cachePoint: { type: this._config.cachePrompt as 'default' } })
-      }
-
-      request.system = system
     }
 
     // Add tool configuration
@@ -495,6 +503,9 @@ export class BedrockModel extends Model<BedrockModelConfig> {
           throw Error("reasoning content format incorrect. Either 'text' or 'redactedContent' must be set.")
         }
       }
+
+      case 'cachePointBlock':
+        return { cachePoint: { type: block.cacheType } }
     }
   }
 

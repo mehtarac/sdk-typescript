@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers'
-import { BedrockModel } from '@strands-agents/sdk'
-import { ContextWindowOverflowError } from '@strands-agents/sdk'
-import type { Message } from '@strands-agents/sdk'
-import type { ToolSpec } from '@strands-agents/sdk'
-import type { ModelStreamEvent } from '@strands-agents/sdk'
+import { BedrockModel } from '../src/models/bedrock'
+import { ContextWindowOverflowError } from '../src/errors'
+import type { Message } from '../src/types/messages'
+import type { ToolSpec } from '../src/tools/types'
+import type { ModelStreamEvent } from '../src/models/streaming'
 import { ValidationException } from '@aws-sdk/client-bedrock-runtime'
 
 /**
@@ -203,6 +203,92 @@ describe.skipIf(!hasCredentials)('BedrockModel Integration Tests', () => {
       // Check that stop reason is maxTokens
       const messageStopEvent = events.find((e) => e.type === 'modelMessageStopEvent')
       expect(messageStopEvent?.stopReason).toBe('maxTokens')
+    })
+
+    it.concurrent('uses system prompt cache on subsequent requests', async () => {
+      const provider = new BedrockModel({ maxTokens: 100 })
+
+      // Create a system prompt with text + cache point
+      // Use enough text to be worth caching (minimum 1024 tokens recommended by AWS)
+      // Append unique string to ensure fresh cache creation on each test run
+      const largeContext = 'Context information: ' + 'hello '.repeat(2000) + ` [test-${Date.now()}-${Math.random()}]`
+      const cachedSystemPrompt = [
+        { type: 'textBlock' as const, text: 'You are a helpful assistant.' },
+        { type: 'textBlock' as const, text: largeContext },
+        { type: 'cachePointBlock' as const, cacheType: 'default' as const },
+      ]
+
+      // First request - creates cache
+      const messages1: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Say hello' }] }]
+      const events1 = await collectEvents(provider.stream(messages1, { systemPrompt: cachedSystemPrompt }))
+
+      // Verify first request creates cache (if caching is supported)
+      const metadata1 = events1.find((e) => e.type === 'modelMetadataEvent')
+      expect(metadata1?.usage?.inputTokens).toBeGreaterThan(0)
+
+      // Verify cache creation
+      expect(metadata1.usage?.cacheWriteInputTokens).toBeGreaterThan(0)
+
+      // Second request - should use cache
+      const messages2: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Say goodbye' }] }]
+      const events2 = await collectEvents(provider.stream(messages2, { systemPrompt: cachedSystemPrompt }))
+
+      // Verify second request uses cache (if caching is supported)
+      const metadata2 = events2.find((e) => e.type === 'modelMetadataEvent')
+      expect(metadata2?.usage).toBeDefined()
+
+      // Verify cache read
+      expect(metadata2?.usage?.cacheReadInputTokens).toBeGreaterThan(0)
+    })
+
+    it.concurrent('uses message cache points on subsequent requests', async () => {
+      const provider = new BedrockModel({ maxTokens: 100 })
+
+      // Create messages with cache points
+      // Append unique string to ensure fresh cache creation on each test run
+      const largeContext = 'Context information: ' + 'hello '.repeat(2000) + ` [test-${Date.now()}-${Math.random()}]`
+
+      // First request - creates cache
+      const messages1: Message[] = [
+        {
+          role: 'user',
+          content: [
+            { type: 'textBlock', text: largeContext },
+            { type: 'cachePointBlock', cacheType: 'default' },
+            { type: 'textBlock', text: 'Say hello' },
+          ],
+        },
+      ]
+
+      // First request - creates cache
+      const events1 = await collectEvents(provider.stream(messages1))
+
+      // Verify first request creates cache (if caching is supported)
+      const metadata1 = events1.find((e) => e.type === 'modelMetadataEvent')
+      expect(metadata1?.usage?.inputTokens).toBeGreaterThan(0)
+
+      // Verify cache creation
+      expect(metadata1.usage?.cacheWriteInputTokens).toBeGreaterThan(0)
+
+      // Second request - should use cache
+      const messages2: Message[] = [
+        {
+          role: 'user',
+          content: [
+            { type: 'textBlock', text: largeContext },
+            { type: 'cachePointBlock', cacheType: 'default' },
+            { type: 'textBlock', text: 'Say goodbye' },
+          ],
+        },
+      ]
+      const events2 = await collectEvents(provider.stream(messages2))
+
+      // Verify second request uses cache (if caching is supported)
+      const metadata2 = events2.find((e) => e.type === 'modelMetadataEvent')
+      expect(metadata2?.usage).toBeDefined()
+
+      // Verify cache read
+      expect(metadata2.usage?.cacheReadInputTokens).toBeGreaterThan(0)
     })
   })
 

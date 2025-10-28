@@ -1,4 +1,4 @@
-import type { Message, ContentBlock, Role, StopReason } from '../types/messages'
+import type { Message, ContentBlock, Role, StopReason, SystemPrompt } from '../types/messages'
 import type { ToolSpec, ToolChoice } from '../tools/types'
 import type { ModelStreamEvent } from './streaming'
 
@@ -23,8 +23,9 @@ export interface BaseModelConfig {
 export interface StreamOptions {
   /**
    * System prompt to guide the model's behavior.
+   * Can be a simple string or an array of content blocks for advanced caching.
    */
-  systemPrompt?: string
+  systemPrompt?: SystemPrompt
 
   /**
    * Array of tool specifications that the model can use.

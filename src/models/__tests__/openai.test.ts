@@ -160,7 +160,7 @@ describe('OpenAIModel', () => {
   describe('stream', () => {
     it('throws not yet implemented error', async () => {
       const provider = new OpenAIModel({ modelId: 'gpt-4o' })
-      const messages: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
+      const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
 
       await expect(async () => {
         // Try to consume the async generator

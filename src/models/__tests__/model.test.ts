@@ -1,8 +1,41 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime'
-import { BedrockModel } from '../bedrock'
+import { describe, it, expect } from 'vitest'
+import { Model } from '../model'
 import type { Message, ContentBlock } from '../../types/messages'
 import type { ModelStreamEvent } from '../streaming'
+import type { BaseModelConfig, StreamOptions } from '../model'
+
+/**
+ * Test model provider that returns a predefined stream of events.
+ */
+class TestModelProvider extends Model<BaseModelConfig> {
+  private eventGenerator: (() => AsyncGenerator<ModelStreamEvent>) | undefined
+  private config: BaseModelConfig = { modelId: 'test-model' }
+
+  constructor(eventGenerator?: () => AsyncGenerator<ModelStreamEvent>) {
+    super()
+    this.eventGenerator = eventGenerator
+  }
+
+  setEventGenerator(eventGenerator: () => AsyncGenerator<ModelStreamEvent>): void {
+    this.eventGenerator = eventGenerator
+  }
+
+  updateConfig(modelConfig: BaseModelConfig): void {
+    this.config = { ...this.config, ...modelConfig }
+  }
+
+  getConfig(): BaseModelConfig {
+    return this.config
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async *stream(_messages: Message[], _options?: StreamOptions): AsyncGenerator<ModelStreamEvent> {
+    if (!this.eventGenerator) {
+      throw new Error('Event generator not set')
+    }
+    yield* this.eventGenerator()
+  }
+}
 
 /**
  * Helper function to collect events and message from an async generator properly.
@@ -27,43 +60,26 @@ async function collectAggregated(
   return { items, result: result! }
 }
 
-/**
- * Helper function to setup mock send with custom stream generator.
- */
-function setupMockSend(streamGenerator: () => AsyncGenerator<unknown>): void {
-  vi.clearAllMocks()
-
-  const mockSend = vi.fn().mockImplementation(async () => {
-    return {
-      stream: streamGenerator(),
-    }
-  })
-
-  vi.spyOn(BedrockRuntimeClient.prototype, 'send').mockImplementation(mockSend)
-}
-
 describe('Model', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   describe('streamAggregated', () => {
     describe('when streaming a simple text message', () => {
       it('yields original events plus aggregated content block and returns final message', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
-          yield { contentBlockDelta: { delta: { text: 'Hello' }, contentBlockIndex: 0 } }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { messageStop: { stopReason: 'end_turn' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 } } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'textDelta', text: 'Hello' },
+            contentBlockIndex: 0,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { items, result } = await collectAggregated(provider.streamAggregated(messages))
@@ -105,19 +121,29 @@ describe('Model', () => {
 
     describe('when streaming multiple text blocks', () => {
       it('yields all blocks in order', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
-          yield { contentBlockDelta: { delta: { text: 'First' }, contentBlockIndex: 0 } }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { contentBlockStart: { contentBlockIndex: 1 } }
-          yield { contentBlockDelta: { delta: { text: 'Second' }, contentBlockIndex: 1 } }
-          yield { contentBlockStop: { contentBlockIndex: 1 } }
-          yield { messageStop: { stopReason: 'end_turn' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 } } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'textDelta', text: 'First' },
+            contentBlockIndex: 0,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 1 }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'textDelta', text: 'Second' },
+            contentBlockIndex: 1,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 1 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { items, result } = await collectAggregated(provider.streamAggregated(messages))
@@ -144,22 +170,31 @@ describe('Model', () => {
 
     describe('when streaming tool use', () => {
       it('yields complete tool use block', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
           yield {
-            contentBlockStart: {
-              contentBlockIndex: 0,
-              start: { toolUse: { toolUseId: 'tool1', name: 'get_weather' } },
-            },
+            type: 'modelContentBlockStartEvent',
+            contentBlockIndex: 0,
+            start: { type: 'toolUseStart', toolUseId: 'tool1', name: 'get_weather' },
           }
-          yield { contentBlockDelta: { delta: { toolUse: { input: '{"location"' } }, contentBlockIndex: 0 } }
-          yield { contentBlockDelta: { delta: { toolUse: { input: ': "Paris"}' } }, contentBlockIndex: 0 } }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { messageStop: { stopReason: 'tool_use' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 8, totalTokens: 18 } } }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'toolUseInputDelta', input: '{"location"' },
+            contentBlockIndex: 0,
+          }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'toolUseInputDelta', input: ': "Paris"}' },
+            contentBlockIndex: 0,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'toolUse' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 8, totalTokens: 18 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { items, result } = await collectAggregated(provider.streamAggregated(messages))
@@ -188,27 +223,27 @@ describe('Model', () => {
 
     describe('when streaming reasoning content', () => {
       it('yields complete reasoning block', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
           yield {
-            contentBlockDelta: {
-              delta: { reasoningContent: { text: 'Thinking about', signature: 'sig1', redactedContent: null } },
-              contentBlockIndex: 0,
-            },
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'reasoningContentDelta', text: 'Thinking about', signature: 'sig1' },
+            contentBlockIndex: 0,
           }
           yield {
-            contentBlockDelta: {
-              delta: { reasoningContent: { text: ' the problem', signature: null, redactedContent: null } },
-              contentBlockIndex: 0,
-            },
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'reasoningContentDelta', text: ' the problem' },
+            contentBlockIndex: 0,
           }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { messageStop: { stopReason: 'end_turn' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 } } }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { items, result } = await collectAggregated(provider.streamAggregated(messages))
@@ -234,21 +269,22 @@ describe('Model', () => {
       })
 
       it('omits signature if not present', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
           yield {
-            contentBlockDelta: {
-              delta: { reasoningContent: { text: 'Thinking', signature: null, redactedContent: null } },
-              contentBlockIndex: 0,
-            },
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'reasoningContentDelta', text: 'Thinking' },
+            contentBlockIndex: 0,
           }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { messageStop: { stopReason: 'end_turn' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 } } }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { items, result } = await collectAggregated(provider.streamAggregated(messages))
@@ -274,32 +310,40 @@ describe('Model', () => {
 
     describe('when streaming mixed content blocks', () => {
       it('yields all blocks in correct order', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
-          yield { contentBlockDelta: { delta: { text: 'Hello' }, contentBlockIndex: 0 } }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
           yield {
-            contentBlockStart: {
-              contentBlockIndex: 1,
-              start: { toolUse: { toolUseId: 'tool1', name: 'get_weather' } },
-            },
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'textDelta', text: 'Hello' },
+            contentBlockIndex: 0,
           }
-          yield { contentBlockDelta: { delta: { toolUse: { input: '{"city": "Paris"}' } }, contentBlockIndex: 1 } }
-          yield { contentBlockStop: { contentBlockIndex: 1 } }
-          yield { contentBlockStart: { contentBlockIndex: 2 } }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
           yield {
-            contentBlockDelta: {
-              delta: { reasoningContent: { text: 'Reasoning', signature: 'sig1', redactedContent: null } },
-              contentBlockIndex: 2,
-            },
+            type: 'modelContentBlockStartEvent',
+            contentBlockIndex: 1,
+            start: { type: 'toolUseStart', toolUseId: 'tool1', name: 'get_weather' },
           }
-          yield { contentBlockStop: { contentBlockIndex: 2 } }
-          yield { messageStop: { stopReason: 'end_turn' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 15, totalTokens: 25 } } }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'toolUseInputDelta', input: '{"city": "Paris"}' },
+            contentBlockIndex: 1,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 1 }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 2 }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'reasoningContentDelta', text: 'Reasoning', signature: 'sig1' },
+            contentBlockIndex: 2,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 2 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 15, totalTokens: 25 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { items, result } = await collectAggregated(provider.streamAggregated(messages))
@@ -323,16 +367,22 @@ describe('Model', () => {
 
     describe('stop reasons', () => {
       it('includes stop reason in returned message', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
-          yield { contentBlockDelta: { delta: { text: 'Test' }, contentBlockIndex: 0 } }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { messageStop: { stopReason: 'max_tokens' } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 } } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'textDelta', text: 'Test' },
+            contentBlockIndex: 0,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield { type: 'modelMessageStopEvent', stopReason: 'maxTokens' }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+          }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { result } = await collectAggregated(provider.streamAggregated(messages))
@@ -341,16 +391,22 @@ describe('Model', () => {
       })
 
       it('includes usage metadata in returned message', async () => {
-        setupMockSend(async function* () {
-          yield { messageStart: { role: 'assistant' } }
-          yield { contentBlockStart: { contentBlockIndex: 0 } }
-          yield { contentBlockDelta: { delta: { text: 'Test' }, contentBlockIndex: 0 } }
-          yield { contentBlockStop: { contentBlockIndex: 0 } }
-          yield { metadata: { usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 } } }
-          yield { messageStop: { stopReason: 'end_turn' } }
+        const provider = new TestModelProvider(async function* () {
+          yield { type: 'modelMessageStartEvent', role: 'assistant' }
+          yield { type: 'modelContentBlockStartEvent', contentBlockIndex: 0 }
+          yield {
+            type: 'modelContentBlockDeltaEvent',
+            delta: { type: 'textDelta', text: 'Test' },
+            contentBlockIndex: 0,
+          }
+          yield { type: 'modelContentBlockStopEvent', contentBlockIndex: 0 }
+          yield {
+            type: 'modelMetadataEvent',
+            usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+          }
+          yield { type: 'modelMessageStopEvent', stopReason: 'endTurn' }
         })
 
-        const provider = new BedrockModel()
         const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hi' }] }]
 
         const { result } = await collectAggregated(provider.streamAggregated(messages))

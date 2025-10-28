@@ -1,5 +1,6 @@
 import type { JSONValue } from './json'
 import type { ToolResultContent } from '../tools/types'
+import type { Usage } from '../models/streaming'
 
 /**
  * A message in a conversation between user and assistant.
@@ -29,11 +30,7 @@ export interface Message {
   /**
    * Token usage statistics for this message.
    */
-  usage?: {
-    inputTokens: number
-    outputTokens: number
-    totalTokens: number
-  }
+  usage?: Usage
 }
 
 /**

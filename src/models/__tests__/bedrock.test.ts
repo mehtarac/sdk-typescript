@@ -405,6 +405,7 @@ describe('BedrockModel', () => {
       const provider = new BedrockModel()
       const messages: Message[] = [
         {
+          type: 'message',
           role: 'user',
           content: [
             { type: 'textBlock', text: 'Message with cache point' },
@@ -774,7 +775,7 @@ describe('BedrockModel', () => {
 
     it('formats string system prompt with cachePrompt config', async () => {
       const provider = new BedrockModel({ cachePrompt: 'default' })
-      const messages: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
+      const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
       const options: StreamOptions = {
         systemPrompt: 'You are a helpful assistant',
       }
@@ -795,7 +796,7 @@ describe('BedrockModel', () => {
 
     it('formats array system prompt with text blocks only', async () => {
       const provider = new BedrockModel()
-      const messages: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
+      const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
       const options: StreamOptions = {
         systemPrompt: [
           { type: 'textBlock', text: 'You are a helpful assistant' },
@@ -819,7 +820,7 @@ describe('BedrockModel', () => {
 
     it('formats array system prompt with cache points', async () => {
       const provider = new BedrockModel()
-      const messages: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
+      const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
       const options: StreamOptions = {
         systemPrompt: [
           { type: 'textBlock', text: 'You are a helpful assistant' },
@@ -849,7 +850,7 @@ describe('BedrockModel', () => {
     it('warns when both array system prompt and cachePrompt config are provided', async () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
       const provider = new BedrockModel({ cachePrompt: 'default' })
-      const messages: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
+      const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
       const options: StreamOptions = {
         systemPrompt: [
           { type: 'textBlock', text: 'You are a helpful assistant' },
@@ -881,7 +882,7 @@ describe('BedrockModel', () => {
 
     it('handles empty array system prompt', async () => {
       const provider = new BedrockModel()
-      const messages: Message[] = [{ role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
+      const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
       const options: StreamOptions = {
         systemPrompt: [],
       }

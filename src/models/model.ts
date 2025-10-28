@@ -1,6 +1,6 @@
 import type { Message, ContentBlock, Role, StopReason, SystemPrompt } from '../types/messages'
 import type { ToolSpec, ToolChoice } from '../tools/types'
-import type { ModelStreamEvent } from './streaming'
+import type { ModelStreamEvent, Usage } from './streaming'
 
 /**
  * Base configuration interface for all model providers.
@@ -109,13 +109,7 @@ export abstract class Model<T extends BaseModelConfig> {
       redactedContent?: Uint8Array
     } = {}
     let stopReason: StopReason | undefined
-    let usage:
-      | {
-          inputTokens: number
-          outputTokens: number
-          totalTokens: number
-        }
-      | undefined
+    let usage: Usage | undefined
 
     for await (const event of this.stream(messages, options)) {
       yield event // Pass through immediately

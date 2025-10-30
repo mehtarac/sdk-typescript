@@ -7,7 +7,7 @@ import type { ToolSpec } from '@strands-agents/sdk'
 import { ValidationException } from '@aws-sdk/client-bedrock-runtime'
 
 // eslint-disable-next-line no-restricted-imports
-import { collectIterator } from '../src/__fixtures__/model-test-helpers'
+import { collectIterator, collectGenerator } from '../src/__fixtures__/model-test-helpers'
 
 // Check credentials at module level so skipIf can use it
 let hasCredentials = false
@@ -313,6 +313,61 @@ describe.skipIf(!hasCredentials)('BedrockModel Integration Tests', () => {
           throw Error('Should not get here')
         }
       }).rejects.toBeInstanceOf(ContextWindowOverflowError)
+    })
+  })
+
+  describe('Stream Aggregation', () => {
+    it.concurrent('streamAggregated yields events, content blocks, and returns complete message', async () => {
+      const provider = new BedrockModel({
+        maxTokens: 100,
+      })
+
+      const messages: Message[] = [
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'textBlock', text: 'Say hello in exactly one word.' }],
+        },
+      ]
+
+      const { items, result } = await collectGenerator(provider.streamAggregated(messages))
+
+      // Count different types using switch-case pattern
+      let streamEventCount = 0
+      let contentBlockCount = 0
+
+      for (const item of items) {
+        switch (item.type) {
+          case 'modelMessageStartEvent':
+          case 'modelContentBlockStartEvent':
+          case 'modelContentBlockDeltaEvent':
+          case 'modelContentBlockStopEvent':
+          case 'modelMessageStopEvent':
+          case 'modelMetadataEvent':
+            streamEventCount++
+            break
+          case 'textBlock':
+          case 'toolUseBlock':
+          case 'reasoningBlock':
+            contentBlockCount++
+            break
+        }
+      }
+
+      // Verify we got events and content blocks
+      expect(streamEventCount).toBeGreaterThan(0)
+      expect(contentBlockCount).toBe(1)
+
+      // Verify the complete message structure is returned
+      expect(result).toMatchObject({
+        type: 'message',
+        role: 'assistant',
+        content: expect.arrayContaining([
+          expect.objectContaining({
+            type: 'textBlock',
+          }),
+        ]),
+      })
     })
   })
 })

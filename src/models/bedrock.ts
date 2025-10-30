@@ -26,7 +26,7 @@ import {
   ContentBlockDelta,
   type ToolConfiguration,
 } from '@aws-sdk/client-bedrock-runtime'
-import type { Model, BaseModelConfig, StreamOptions } from '../models/model'
+import { Model, type BaseModelConfig, type StreamOptions } from '../models/model'
 import type { Message, ContentBlock } from '../types/messages'
 import type { ModelStreamEvent, ReasoningContentDelta, Usage } from '../models/streaming'
 import type { JSONValue } from '../types/json'
@@ -198,7 +198,7 @@ export interface BedrockModelOptions extends BedrockModelConfig {
  * }
  * ```
  */
-export class BedrockModel implements Model<BedrockModelConfig, BedrockRuntimeClientConfig> {
+export class BedrockModel extends Model<BedrockModelConfig> {
   private _config: BedrockModelConfig
   private _client: BedrockRuntimeClient
 
@@ -233,6 +233,7 @@ export class BedrockModel implements Model<BedrockModelConfig, BedrockRuntimeCli
    * ```
    */
   constructor(options?: BedrockModelOptions) {
+    super()
     const { region, clientConfig, ...modelConfig } = options ?? {}
 
     // Initialize model config with default model ID if not provided

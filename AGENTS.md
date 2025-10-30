@@ -208,6 +208,71 @@ describe('ClassName', () => {
 - Use descriptive test names without "should" prefix
 - Group tests by functionality or scenario
 
+### Test Batching Strategy
+
+When test setup is expensive (complex object creation, multiple dependencies, time-consuming initialization), batch multiple related assertions into a single test to reduce redundant setup. This improves test performance and maintainability.
+
+**When to batch tests**:
+- Test setup > actual test logic
+- Multiple assertions on the same object state
+- Related behavioral checks that share context
+
+**Example - Individual tests with redundant setup**:
+```typescript
+describe('ComplexTool', () => {
+  it('has correct tool name', () => {
+    // Expensive setup
+    const tool = createComplexTool({
+      name: 'testTool',
+      description: 'Test description',
+      inputSchema: z.object({ value: z.string() }),
+      callback: (input) => input.value
+    })
+    expect(tool.toolName).toBe('testTool')
+  })
+
+  it('has correct description', () => {
+    // Same expensive setup repeated
+    const tool = createComplexTool({
+      name: 'testTool',
+      description: 'Test description',
+      inputSchema: z.object({ value: z.string() }),
+      callback: (input) => input.value
+    })
+    expect(tool.description).toBe('Test description')
+  })
+})
+```
+
+**Example - Batched test**:
+```typescript
+describe('ComplexTool', () => {
+  describe('tool creation and properties', () => {
+    it('creates tool with correct properties', () => {
+      // Setup once
+      const tool = createComplexTool({
+        name: 'testTool',
+        description: 'Test description',
+        inputSchema: z.object({ value: z.string() }),
+        callback: (input) => input.value
+      })
+
+      // Multiple related assertions
+      expect(tool.toolName).toBe('testTool')
+      expect(tool.description).toBe('Test description')
+      expect(tool.toolSpec.name).toBe('testTool')
+      expect(tool.toolSpec.description).toBe('Test description')
+    })
+  })
+})
+```
+
+**Guidelines**:
+- Batch assertions testing the same object state
+- Keep individual tests for distinct behaviors or error paths
+- Use descriptive describe blocks to clarify what's being tested
+- Balance between DRY principle and test isolation
+
 ### TypeScript Type Safety
 
 **Strict requirements**:

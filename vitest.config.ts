@@ -2,7 +2,6 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    globalSetup: './tests_integ/global-setup.ts', 
     projects: [
       {
         test: {
@@ -15,6 +14,7 @@ export default defineConfig({
           include: ['tests_integ/**/*.test.ts'],
           name: { label: 'integ', color: 'magenta' },
           testTimeout: 30000,
+          globalSetup: './tests_integ/integ-setup.ts', // Move it here!
         },
       },
     ],

@@ -41,7 +41,6 @@ async function loadApiKeysFromSecretsManager(): Promise<void> {
   } catch (e) {
     console.warn('Error retrieving secret', e)
   }
-}
   // else {
   //   console.log('==============================================================================================================================================================================================================================================================================')
   //   console.log('No STRANDS_TEST_API_KEYS_SECRET_NAME environment variable found')

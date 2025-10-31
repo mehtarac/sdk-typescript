@@ -51,7 +51,7 @@ jobs:
         with:
          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
          aws-region: us-east-1
-         mask-aws-account-id: true
+         mask-aws-account-id: false
 
       - name: Get Current Role Info
         run: |

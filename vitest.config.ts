@@ -14,7 +14,7 @@ export default defineConfig({
           include: ['tests_integ/**/*.test.ts'],
           name: { label: 'integ', color: 'magenta' },
           testTimeout: 30000,
-          globalSetup: './tests_integ/integ-setup.ts', // Move it here!
+          // globalSetup: './tests_integ/integ-setup.ts', // Move it here!
         },
       },
     ],

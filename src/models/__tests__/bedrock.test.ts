@@ -1283,4 +1283,624 @@ describe('BedrockModel', () => {
       })
     })
   })
+
+  describe('extended content block types', async () => {
+    const { ConverseStreamCommand } = await import('@aws-sdk/client-bedrock-runtime')
+    const mockConverseStreamCommand = vi.mocked(ConverseStreamCommand)
+
+    describe('imageBlock formatting', () => {
+      it('formats imageBlock with bytes source', async () => {
+        const provider = new BedrockModel()
+        const imageData = new Uint8Array([137, 80, 78, 71]) // PNG header
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'imageBlock',
+                format: 'png',
+                source: {
+                  type: 'bytes',
+                  bytes: imageData,
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  image: {
+                    format: 'png',
+                    source: {
+                      bytes: imageData,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats imageBlock with s3Location source including bucketOwner', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'imageBlock',
+                format: 'jpeg',
+                source: {
+                  type: 's3Location',
+                  uri: 's3://my-bucket/image.jpg',
+                  bucketOwner: '123456789012',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  image: {
+                    format: 'jpeg',
+                    source: {
+                      s3Location: {
+                        uri: 's3://my-bucket/image.jpg',
+                        bucketOwner: '123456789012',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats imageBlock with s3Location source without bucketOwner', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'imageBlock',
+                format: 'webp',
+                source: {
+                  type: 's3Location',
+                  uri: 's3://my-bucket/image.webp',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  image: {
+                    format: 'webp',
+                    source: {
+                      s3Location: {
+                        uri: 's3://my-bucket/image.webp',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats imageBlock with all supported formats', async () => {
+        const provider = new BedrockModel()
+        const formats = ['png', 'jpeg', 'gif', 'webp'] as const
+
+        for (const format of formats) {
+          const messages: Message[] = [
+            {
+              type: 'message',
+              role: 'user',
+              content: [
+                {
+                  type: 'imageBlock',
+                  format,
+                  source: {
+                    type: 'bytes',
+                    bytes: new Uint8Array([1, 2, 3]),
+                  },
+                },
+              ],
+            },
+          ]
+
+          collectIterator(provider.stream(messages))
+
+          expect(mockConverseStreamCommand).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      image: {
+                        format,
+                        source: {
+                          bytes: expect.any(Uint8Array),
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            })
+          )
+        }
+      })
+    })
+
+    describe('videoBlock formatting', () => {
+      it('formats videoBlock with bytes source', async () => {
+        const provider = new BedrockModel()
+        const videoData = new Uint8Array([0, 0, 0, 32, 102, 116, 121, 112]) // MP4 header
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'videoBlock',
+                format: 'mp4',
+                source: {
+                  type: 'bytes',
+                  bytes: videoData,
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  video: {
+                    format: 'mp4',
+                    source: {
+                      bytes: videoData,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats videoBlock with s3Location source including bucketOwner', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'videoBlock',
+                format: 'mkv',
+                source: {
+                  type: 's3Location',
+                  uri: 's3://my-bucket/video.mkv',
+                  bucketOwner: '123456789012',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  video: {
+                    format: 'mkv',
+                    source: {
+                      s3Location: {
+                        uri: 's3://my-bucket/video.mkv',
+                        bucketOwner: '123456789012',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats videoBlock with s3Location source without bucketOwner', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'videoBlock',
+                format: 'webm',
+                source: {
+                  type: 's3Location',
+                  uri: 's3://my-bucket/video.webm',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  video: {
+                    format: 'webm',
+                    source: {
+                      s3Location: {
+                        uri: 's3://my-bucket/video.webm',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats videoBlock with multiple supported formats', async () => {
+        const provider = new BedrockModel()
+        const formats = ['mp4', 'mkv', 'webm'] as const
+
+        for (const format of formats) {
+          const messages: Message[] = [
+            {
+              type: 'message',
+              role: 'user',
+              content: [
+                {
+                  type: 'videoBlock',
+                  format,
+                  source: {
+                    type: 'bytes',
+                    bytes: new Uint8Array([1, 2, 3]),
+                  },
+                },
+              ],
+            },
+          ]
+
+          collectIterator(provider.stream(messages))
+
+          expect(mockConverseStreamCommand).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      video: {
+                        format,
+                        source: {
+                          bytes: expect.any(Uint8Array),
+                        },
+                      },
+                    },
+                  ],
+                },
+              ],
+            })
+          )
+        }
+      })
+    })
+
+    describe('documentBlock formatting', () => {
+      it('formats documentBlock with bytes source', async () => {
+        const provider = new BedrockModel()
+        const documentData = new Uint8Array([37, 80, 68, 70]) // PDF header
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'documentBlock',
+                name: 'test-document.pdf',
+                source: {
+                  type: 'bytes',
+                  bytes: documentData,
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  document: {
+                    name: 'test-document.pdf',
+                    source: {
+                      bytes: documentData,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats documentBlock with content source', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'documentBlock',
+                name: 'test-document',
+                source: {
+                  type: 'content',
+                  content: [{ text: 'First paragraph' }, { text: 'Second paragraph' }],
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  document: {
+                    name: 'test-document',
+                    source: {
+                      content: [{ text: 'First paragraph' }, { text: 'Second paragraph' }],
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats documentBlock with s3Location source', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'documentBlock',
+                name: 'test-document.pdf',
+                source: {
+                  type: 's3Location',
+                  uri: 's3://my-bucket/document.pdf',
+                  bucketOwner: '123456789012',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  document: {
+                    name: 'test-document.pdf',
+                    source: {
+                      s3Location: {
+                        uri: 's3://my-bucket/document.pdf',
+                        bucketOwner: '123456789012',
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats documentBlock with text source', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'documentBlock',
+                name: 'test-document.txt',
+                source: {
+                  type: 'text',
+                  text: 'This is the document content',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  document: {
+                    name: 'test-document.txt',
+                    source: {
+                      text: 'This is the document content',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats documentBlock with all optional fields', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'documentBlock',
+                name: 'test-document.pdf',
+                format: 'pdf',
+                context: 'This is a test document',
+                citations: { enabled: true },
+                source: {
+                  type: 'text',
+                  text: 'Document content',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  document: {
+                    name: 'test-document.pdf',
+                    format: 'pdf',
+                    context: 'This is a test document',
+                    citations: { enabled: true },
+                    source: {
+                      text: 'Document content',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+
+      it('formats documentBlock with only required fields', async () => {
+        const provider = new BedrockModel()
+        const messages: Message[] = [
+          {
+            type: 'message',
+            role: 'user',
+            content: [
+              {
+                type: 'documentBlock',
+                name: 'minimal-document',
+                source: {
+                  type: 'text',
+                  text: 'Minimal content',
+                },
+              },
+            ],
+          },
+        ]
+
+        collectIterator(provider.stream(messages))
+
+        expect(mockConverseStreamCommand).toHaveBeenLastCalledWith({
+          modelId: 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  document: {
+                    name: 'minimal-document',
+                    source: {
+                      text: 'Minimal content',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        })
+      })
+    })
+  })
 })

@@ -569,6 +569,86 @@ export class BedrockModel extends Model<BedrockModelConfig> {
 
       case 'cachePointBlock':
         return { cachePoint: { type: block.cacheType } }
+
+      case 'imageBlock': {
+        // Format image source
+        let imageSource
+        if (block.source.type === 'bytes') {
+          imageSource = { bytes: block.source.bytes }
+        } else {
+          // s3Location
+          imageSource = {
+            s3Location: {
+              uri: block.source.uri,
+              ...(block.source.bucketOwner && { bucketOwner: block.source.bucketOwner }),
+            },
+          }
+        }
+
+        return {
+          image: {
+            format: block.format,
+            source: imageSource,
+          },
+        }
+      }
+
+      case 'videoBlock': {
+        // Format video source
+        let videoSource
+        if (block.source.type === 'bytes') {
+          videoSource = { bytes: block.source.bytes }
+        } else {
+          // s3Location
+          videoSource = {
+            s3Location: {
+              uri: block.source.uri,
+              ...(block.source.bucketOwner && { bucketOwner: block.source.bucketOwner }),
+            },
+          }
+        }
+
+        return {
+          video: {
+            format: block.format,
+            source: videoSource,
+          },
+        }
+      }
+
+      case 'documentBlock': {
+        // Format document source
+        let documentSource
+        switch (block.source.type) {
+          case 'bytes':
+            documentSource = { bytes: block.source.bytes }
+            break
+          case 'content':
+            documentSource = { content: block.source.content }
+            break
+          case 's3Location':
+            documentSource = {
+              s3Location: {
+                uri: block.source.uri,
+                ...(block.source.bucketOwner && { bucketOwner: block.source.bucketOwner }),
+              },
+            }
+            break
+          case 'text':
+            documentSource = { text: block.source.text }
+            break
+        }
+
+        return {
+          document: {
+            name: block.name,
+            source: documentSource,
+            ...(block.format && { format: block.format }),
+            ...(block.citations && { citations: block.citations }),
+            ...(block.context && { context: block.context }),
+          },
+        }
+      }
     }
   }
 

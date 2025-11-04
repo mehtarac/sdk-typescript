@@ -30,11 +30,20 @@ export type Role = 'user' | 'assistant'
 
 /**
  * A block of content within a message.
- * Content blocks can contain text, tool usage requests, tool results, reasoning content, or cache points.
+ * Content blocks can contain text, tool usage requests, tool results, reasoning content, cache points,
+ * images, videos, or documents.
  *
  * This is a discriminated union where the `type` field determines the content format.
  */
-export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock | ReasoningBlock | CachePointBlock
+export type ContentBlock =
+  | TextBlock
+  | ToolUseBlock
+  | ToolResultBlock
+  | ReasoningBlock
+  | CachePointBlock
+  | ImageBlock
+  | VideoBlock
+  | DocumentBlock
 
 /**
  * Text content block within a message.
@@ -141,6 +150,269 @@ export interface CachePointBlock {
    * The cache type. Currently only 'default' is supported.
    */
   cacheType: 'default'
+}
+
+/**
+ * Image content block within a message.
+ * Supports images in PNG, JPEG, GIF, or WEBP formats.
+ *
+ * @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_ImageBlock.html
+ */
+export interface ImageBlock {
+  /**
+   * Discriminator for image content.
+   */
+  type: 'imageBlock'
+
+  /**
+   * The format of the image.
+   */
+  format: 'png' | 'jpeg' | 'gif' | 'webp'
+
+  /**
+   * The source of the image data.
+   */
+  source: ImageSource
+}
+
+/**
+ * Source of image data.
+ * Can be either inline bytes or an S3 location.
+ */
+export type ImageSource = ImageSourceBytes | ImageSourceS3
+
+/**
+ * Image data provided as inline bytes.
+ */
+export interface ImageSourceBytes {
+  /**
+   * Discriminator for bytes source.
+   */
+  type: 'bytes'
+
+  /**
+   * Binary image data.
+   */
+  bytes: Uint8Array
+}
+
+/**
+ * Image data referenced by S3 location.
+ *
+ * @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_S3Location.html
+ */
+export interface ImageSourceS3 {
+  /**
+   * Discriminator for S3 location source.
+   */
+  type: 's3Location'
+
+  /**
+   * S3 URI to the image file.
+   */
+  uri: string
+
+  /**
+   * AWS account ID of the S3 bucket owner.
+   */
+  bucketOwner?: string
+}
+
+/**
+ * Video content block within a message.
+ * Supports various video formats including MP4, MKV, MOV, WEBM, FLV, MPEG, MPG, WMV, and 3GP.
+ *
+ * @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_VideoBlock.html
+ */
+export interface VideoBlock {
+  /**
+   * Discriminator for video content.
+   */
+  type: 'videoBlock'
+
+  /**
+   * The format of the video.
+   */
+  format: 'mkv' | 'mov' | 'mp4' | 'webm' | 'flv' | 'mpeg' | 'mpg' | 'wmv' | 'three_gp'
+
+  /**
+   * The source of the video data.
+   */
+  source: VideoSource
+}
+
+/**
+ * Source of video data.
+ * Can be either inline bytes or an S3 location.
+ */
+export type VideoSource = VideoSourceBytes | VideoSourceS3
+
+/**
+ * Video data provided as inline bytes.
+ */
+export interface VideoSourceBytes {
+  /**
+   * Discriminator for bytes source.
+   */
+  type: 'bytes'
+
+  /**
+   * Binary video data.
+   */
+  bytes: Uint8Array
+}
+
+/**
+ * Video data referenced by S3 location.
+ *
+ * @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_S3Location.html
+ */
+export interface VideoSourceS3 {
+  /**
+   * Discriminator for S3 location source.
+   */
+  type: 's3Location'
+
+  /**
+   * S3 URI to the video file.
+   */
+  uri: string
+
+  /**
+   * AWS account ID of the S3 bucket owner.
+   */
+  bucketOwner?: string
+}
+
+/**
+ * Document content block within a message.
+ * Supports various document formats including PDF, Office documents, CSV, HTML, text, and markdown.
+ *
+ * @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_DocumentBlock.html
+ */
+export interface DocumentBlock {
+  /**
+   * Discriminator for document content.
+   */
+  type: 'documentBlock'
+
+  /**
+   * Name of the document. Must be between 1 and 200 characters.
+   */
+  name: string
+
+  /**
+   * The source of the document data.
+   */
+  source: DocumentSource
+
+  /**
+   * The format of the document.
+   */
+  format?: 'pdf' | 'csv' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'html' | 'txt' | 'md'
+
+  /**
+   * Configuration for citations in the document.
+   */
+  citations?: CitationsConfig
+
+  /**
+   * Additional context about the document.
+   */
+  context?: string
+}
+
+/**
+ * Source of document data.
+ * Can be inline bytes, structured content, S3 location, or plain text.
+ */
+export type DocumentSource = DocumentSourceBytes | DocumentSourceContent | DocumentSourceS3 | DocumentSourceText
+
+/**
+ * Document data provided as inline bytes.
+ */
+export interface DocumentSourceBytes {
+  /**
+   * Discriminator for bytes source.
+   */
+  type: 'bytes'
+
+  /**
+   * Binary document data.
+   */
+  bytes: Uint8Array
+}
+
+/**
+ * Document data provided as structured content blocks.
+ */
+export interface DocumentSourceContent {
+  /**
+   * Discriminator for content source.
+   */
+  type: 'content'
+
+  /**
+   * Array of content blocks that make up the document.
+   */
+  content: DocumentContentBlock[]
+}
+
+/**
+ * A content block within a document.
+ */
+export interface DocumentContentBlock {
+  /**
+   * Text content of the block.
+   */
+  text: string
+}
+
+/**
+ * Document data referenced by S3 location.
+ *
+ * @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_S3Location.html
+ */
+export interface DocumentSourceS3 {
+  /**
+   * Discriminator for S3 location source.
+   */
+  type: 's3Location'
+
+  /**
+   * S3 URI to the document file.
+   */
+  uri: string
+
+  /**
+   * AWS account ID of the S3 bucket owner.
+   */
+  bucketOwner?: string
+}
+
+/**
+ * Document data provided as plain text.
+ */
+export interface DocumentSourceText {
+  /**
+   * Discriminator for text source.
+   */
+  type: 'text'
+
+  /**
+   * Plain text content of the document.
+   */
+  text: string
+}
+
+/**
+ * Configuration for citations in a document.
+ */
+export interface CitationsConfig {
+  /**
+   * Whether citations are enabled for this document.
+   */
+  enabled: boolean
 }
 
 /**

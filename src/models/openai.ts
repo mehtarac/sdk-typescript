@@ -526,6 +526,15 @@ export class OpenAIModel extends Model<OpenAIModelConfig> {
                 throw new Error(
                   'Reasoning blocks are not supported by OpenAI. ' + 'This feature is specific to AWS Bedrock models.'
                 )
+              } else if (block.type === 'imageBlock') {
+                console.warn('OpenAI provider does not support image content blocks. This content will be skipped.')
+                return ''
+              } else if (block.type === 'videoBlock') {
+                console.warn('OpenAI provider does not support video content blocks. This content will be skipped.')
+                return ''
+              } else if (block.type === 'documentBlock') {
+                console.warn('OpenAI provider does not support document content blocks. This content will be skipped.')
+                return ''
               }
               return ''
             })
@@ -611,6 +620,12 @@ export class OpenAIModel extends Model<OpenAIModelConfig> {
             throw new Error(
               'Reasoning blocks are not supported by OpenAI. ' + 'This feature is specific to AWS Bedrock models.'
             )
+          } else if (block.type === 'imageBlock') {
+            console.warn('OpenAI provider does not support image content blocks. This content will be skipped.')
+          } else if (block.type === 'videoBlock') {
+            console.warn('OpenAI provider does not support video content blocks. This content will be skipped.')
+          } else if (block.type === 'documentBlock') {
+            console.warn('OpenAI provider does not support document content blocks. This content will be skipped.')
           }
         }
 

@@ -31,17 +31,7 @@ import {
 } from '@aws-sdk/client-bedrock-runtime'
 import { Model, type BaseModelConfig, type StreamOptions } from '../models/model.js'
 import type { Message, ContentBlock, ToolUseBlock } from '../types/messages.js'
-import {
-  type ReasoningContentDelta,
-  type Usage,
-  ModelMessageStartEvent,
-  ModelContentBlockStartEvent,
-  ModelContentBlockDeltaEvent,
-  ModelContentBlockStopEvent,
-  ModelMessageStopEvent,
-  ModelMetadataEvent,
-  type ModelStreamEventData,
-} from '../models/streaming.js'
+import { type ReasoningContentDelta, type Usage, type ModelStreamEventData } from '../models/streaming.js'
 import type { JSONValue } from '../types/json.js'
 import { ContextWindowOverflowError } from '../errors.js'
 import { ensureDefined } from '../types/validation.js'
@@ -590,19 +580,23 @@ export class BedrockModel extends Model<BedrockModelConfig> {
     const output = ensureDefined(event.output, 'event.output')
     const message = ensureDefined(output.message, 'output.message')
     const role = ensureDefined(message.role, 'message.role')
-    events.push({modelMessageStartEvent: {
-      role,
-    }})
+    events.push({
+      modelMessageStartEvent: {
+        role,
+      },
+    })
 
     // Match on content blocks
     const blockHandlers = {
       text: (textBlock: string, index: number): void => {
-        events.push({modelContentBlockStartEvent: {}})
-        events.push({modelContentBlockDeltaEvent: {
-          contentBlockIndex: index,
-          delta: { type: 'textDelta', text: textBlock },
-        }})
-        events.push({modelContentBlockStopEvent: {}})
+        events.push({ modelContentBlockStartEvent: {} })
+        events.push({
+          modelContentBlockDeltaEvent: {
+            delta: { type: 'textDelta', text: textBlock },
+            contentBlockIndex: index,
+          },
+        })
+        events.push({ modelContentBlockStopEvent: {} })
       },
       toolUse: (block: ToolUseBlock): void => {
         events.push({
@@ -620,13 +614,13 @@ export class BedrockModel extends Model<BedrockModelConfig> {
           },
         })
         events.push({
-          modelContentBlockStopEvent: {} ,
+          modelContentBlockStopEvent: {},
         })
       },
       reasoningContent: (block: ReasoningContentBlock): void => {
         if (!block) return
         events.push({
-          modelContentBlockStartEvent:{  },
+          modelContentBlockStartEvent: {},
         })
 
         const delta: ReasoningContentDelta = { type: 'reasoningContentDelta' }
@@ -639,12 +633,12 @@ export class BedrockModel extends Model<BedrockModelConfig> {
 
         if (Object.keys(delta).length > 1) {
           events.push({
-            modelContentBlockDeltaEvent: {delta },
+            modelContentBlockDeltaEvent: { delta },
           })
         }
 
         events.push({
-          modelContentBlockStopEvent: { },
+          modelContentBlockStopEvent: {},
         })
       },
     }
@@ -707,9 +701,11 @@ export class BedrockModel extends Model<BedrockModelConfig> {
     switch (eventType) {
       case 'messageStart': {
         const data = eventData as BedrockMessageStartEvent
-        events.push({modelMessageStartEvent: {
-          role: ensureDefined(data.role, 'messageStart.role'),
-        }})
+        events.push({
+          modelMessageStartEvent: {
+            role: ensureDefined(data.role, 'messageStart.role'),
+          },
+        })
         break
       }
 
@@ -763,7 +759,7 @@ export class BedrockModel extends Model<BedrockModelConfig> {
 
             if (Object.keys(reasoningDelta).length > 1) {
               events.push({
-                modelContentBlockDeltaEvent:{
+                modelContentBlockDeltaEvent: {
                   delta: reasoningDelta,
                 },
               })

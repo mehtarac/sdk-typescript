@@ -480,18 +480,20 @@ describe('BedrockModel', () => {
       const messages: Message[] = [{ type: 'message', role: 'user', content: [{ type: 'textBlock', text: 'Hello' }] }]
       const events = await collectIterator(provider.stream(messages))
 
-      expect(events).toContainEqual({ role: 'assistant', type: 'modelMessageStartEvent' })
-      expect(events).toContainEqual({ type: 'modelContentBlockStartEvent' })
+      expect(events).toContainEqual({ modelMessageStartEvent: { role: 'assistant' } })
+      expect(events).toContainEqual({ modelContentBlockStartEvent: {} })
       expect(events).toContainEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: { type: 'textDelta', text: 'Hello' },
+        modelContentBlockDeltaEvent: {
+          delta: { type: 'textDelta', text: 'Hello' },
+        },
       })
-      expect(events).toContainEqual({ type: 'modelContentBlockStopEvent' })
-      expect(events).toContainEqual({ type: 'modelMessageStopEvent', stopReason: 'endTurn' })
+      expect(events).toContainEqual({ modelContentBlockStopEvent: {} })
+      expect(events).toContainEqual({ modelMessageStopEvent: { stopReason: 'endTurn' } })
       expect(events).toContainEqual({
-        type: 'modelMetadataEvent',
-        usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
-        metrics: { latencyMs: 100 },
+        modelMetadataEvent: {
+          usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+          metrics: { latencyMs: 100 },
+        },
       })
     })
 
@@ -549,21 +551,24 @@ describe('BedrockModel', () => {
         (e) => 'modelContentBlockDeltaEvent' in e && e.modelContentBlockDeltaEvent.delta.type === 'toolUseInputDelta'
       )
 
-      expect(events).toContainEqual({ role: 'assistant', type: 'modelMessageStartEvent' })
+      expect(events).toContainEqual({ modelMessageStartEvent: { role: 'assistant' } })
       expect(startEvent).toStrictEqual({
-        type: 'modelContentBlockStartEvent',
-        start: { type: 'toolUseStart', name: 'get_weather', toolUseId: 'tool-use-123' },
+        modelContentBlockStartEvent: {
+          start: { type: 'toolUseStart', name: 'get_weather', toolUseId: 'tool-use-123' },
+        },
       })
       expect(inputDeltaEvent).toStrictEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: { type: 'toolUseInputDelta', input: '{"location":"San Francisco"}' },
+        modelContentBlockDeltaEvent: {
+          delta: { type: 'toolUseInputDelta', input: '{"location":"San Francisco"}' },
+        },
       })
-      expect(events).toContainEqual({ type: 'modelContentBlockStopEvent' })
-      expect(events).toContainEqual({ stopReason: 'toolUse', type: 'modelMessageStopEvent' })
+      expect(events).toContainEqual({ modelContentBlockStopEvent: {} })
+      expect(events).toContainEqual({ modelMessageStopEvent: { stopReason: 'toolUse' } })
       expect(events).toContainEqual({
-        type: 'modelMetadataEvent',
-        usage: { inputTokens: 10, outputTokens: 25, totalTokens: 35 },
-        metrics: { latencyMs: 120 },
+        modelMetadataEvent: {
+          usage: { inputTokens: 10, outputTokens: 25, totalTokens: 35 },
+          metrics: { latencyMs: 120 },
+        },
       })
     })
 
@@ -609,18 +614,20 @@ describe('BedrockModel', () => {
       ]
       const events = await collectIterator(provider.stream(messages))
 
-      expect(events).toContainEqual({ role: 'assistant', type: 'modelMessageStartEvent' })
-      expect(events).toContainEqual({ type: 'modelContentBlockStartEvent' })
+      expect(events).toContainEqual({ modelMessageStartEvent: { role: 'assistant' } })
+      expect(events).toContainEqual({ modelContentBlockStartEvent: {} })
       expect(events).toContainEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: { type: 'reasoningContentDelta', text: 'Thinking...' },
+        modelContentBlockDeltaEvent: {
+          delta: { type: 'reasoningContentDelta', text: 'Thinking...' },
+        },
       })
-      expect(events).toContainEqual({ type: 'modelContentBlockStopEvent' })
-      expect(events).toContainEqual({ stopReason: 'endTurn', type: 'modelMessageStopEvent' })
+      expect(events).toContainEqual({ modelContentBlockStopEvent: {} })
+      expect(events).toContainEqual({ modelMessageStopEvent: { stopReason: 'endTurn' } })
       expect(events).toContainEqual({
-        type: 'modelMetadataEvent',
-        usage: { inputTokens: 15, outputTokens: 30, totalTokens: 45 },
-        metrics: { latencyMs: 150 },
+        modelMetadataEvent: {
+          usage: { inputTokens: 15, outputTokens: 30, totalTokens: 45 },
+          metrics: { latencyMs: 150 },
+        },
       })
     })
 
@@ -667,18 +674,20 @@ describe('BedrockModel', () => {
       ]
       const events = await collectIterator(provider.stream(messages))
 
-      expect(events).toContainEqual({ role: 'assistant', type: 'modelMessageStartEvent' })
-      expect(events).toContainEqual({ type: 'modelContentBlockStartEvent' })
+      expect(events).toContainEqual({ modelMessageStartEvent: { role: 'assistant' } })
+      expect(events).toContainEqual({ modelContentBlockStartEvent: {} })
       expect(events).toContainEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: { type: 'reasoningContentDelta', redactedContent: redactedBytes },
+        modelContentBlockDeltaEvent: {
+          delta: { type: 'reasoningContentDelta', redactedContent: redactedBytes },
+        },
       })
-      expect(events).toContainEqual({ type: 'modelContentBlockStopEvent' })
-      expect(events).toContainEqual({ stopReason: 'endTurn', type: 'modelMessageStopEvent' })
+      expect(events).toContainEqual({ modelContentBlockStopEvent: {} })
+      expect(events).toContainEqual({ modelMessageStopEvent: { stopReason: 'endTurn' } })
       expect(events).toContainEqual({
-        type: 'modelMetadataEvent',
-        usage: { inputTokens: 15, outputTokens: 5, totalTokens: 20 },
-        metrics: { latencyMs: 110 },
+        modelMetadataEvent: {
+          usage: { inputTokens: 15, outputTokens: 5, totalTokens: 20 },
+          metrics: { latencyMs: 110 },
+        },
       })
     })
 
@@ -727,10 +736,11 @@ describe('BedrockModel', () => {
       const events = await collectIterator(provider.stream(messages))
 
       expect(events).toContainEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: {
-          type: 'toolUseInputDelta',
-          input: '{"a": 1}',
+        modelContentBlockDeltaEvent: {
+          delta: {
+            type: 'toolUseInputDelta',
+            input: '{"a": 1}',
+          },
         },
       })
     })
@@ -760,18 +770,20 @@ describe('BedrockModel', () => {
       const events = await collectIterator(provider.stream(messages))
 
       expect(events).toContainEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: {
-          type: 'reasoningContentDelta',
-          text: 'thinking...',
-          signature: 'sig123',
+        modelContentBlockDeltaEvent: {
+          delta: {
+            type: 'reasoningContentDelta',
+            text: 'thinking...',
+            signature: 'sig123',
+          },
         },
       })
       expect(events).toContainEqual({
-        type: 'modelContentBlockDeltaEvent',
-        delta: {
-          type: 'reasoningContentDelta',
-          redactedContent: new Uint8Array(1),
+        modelContentBlockDeltaEvent: {
+          delta: {
+            type: 'reasoningContentDelta',
+            redactedContent: new Uint8Array(1),
+          },
         },
       })
     })
@@ -802,7 +814,8 @@ describe('BedrockModel', () => {
       const events = await collectIterator(provider.stream(messages))
 
       const reasoningDelta = events.find(
-        (e) => 'modelContentBlockDeltaEvent' in e && e.modelContentBlockDeltaEvent.delta.type === 'reasoningContentDelta'
+        (e) =>
+          'modelContentBlockDeltaEvent' in e && e.modelContentBlockDeltaEvent.delta.type === 'reasoningContentDelta'
       )
       expect(reasoningDelta).toBeDefined()
       if (
@@ -812,7 +825,7 @@ describe('BedrockModel', () => {
         expect(reasoningDelta.modelContentBlockDeltaEvent.delta.text).toBe('thinking...')
         expect(reasoningDelta.modelContentBlockDeltaEvent.delta.signature).toBeUndefined()
       } else {
-        throw Error("Should fail here")
+        throw Error('Should fail here')
       }
     })
 
@@ -836,7 +849,8 @@ describe('BedrockModel', () => {
       const events = await collectIterator(provider.stream(messages))
 
       const reasoningDelta = events.find(
-        (e) => 'modelContentBlockDeltaEvent' in e && e.modelContentBlockDeltaEvent.delta.type === 'reasoningContentDelta'
+        (e) =>
+          'modelContentBlockDeltaEvent' in e && e.modelContentBlockDeltaEvent.delta.type === 'reasoningContentDelta'
       )
       expect(reasoningDelta).toBeDefined()
       if (

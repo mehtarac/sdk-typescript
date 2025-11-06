@@ -5,6 +5,7 @@ import { OpenAIModel } from '../openai.js'
 import { ContextWindowOverflowError } from '../../errors.js'
 import { collectIterator } from '../../__fixtures__/model-test-helpers.js'
 import type { Message } from '../../types/messages.js'
+import { TextBlock, CachePointBlock } from '../../types/messages.js'
 
 /**
  * Helper to create a mock OpenAI client with streaming support
@@ -215,7 +216,7 @@ describe('OpenAIModel', () => {
 
         // Should still get valid events
         expect(events.length).toBeGreaterThan(0)
-        expect(events[0]).toBe(true)
+        expect(events[0]).toHaveProperty('modelMessageStartEvent')
       })
 
       it('throws error for streaming with n > 1', async () => {
@@ -387,8 +388,7 @@ describe('OpenAIModel', () => {
         expect(events).toHaveLength(6)
         expect(events[0]).toEqual({ modelMessageStartEvent: { role: 'assistant' } })
         expect(events[1]).toEqual({
-          modelContentBlockStartEvent: {
-          },
+          modelContentBlockStartEvent: {},
         })
         expect(events[2]).toEqual({
           modelContentBlockDeltaEvent: {
@@ -401,8 +401,7 @@ describe('OpenAIModel', () => {
           },
         })
         expect(events[4]).toEqual({
-          modelContentBlockStopEvent: {
-          },
+          modelContentBlockStopEvent: {},
         })
         expect(events[5]).toEqual({ modelMessageStopEvent: { stopReason: 'endTurn' } })
       })
@@ -609,10 +608,9 @@ describe('OpenAIModel', () => {
         },
       })
       expect(events[4]).toEqual({
-        modelContentBlockStopEvent: {
-        },
+        modelContentBlockStopEvent: {},
       })
-      expect(events[5]).toEqual({ type: 'modelMessageStopEvent', stopReason: 'toolUse' })
+      expect(events[5]).toEqual({ modelMessageStopEvent: { stopReason: 'toolUse' } })
     })
 
     it('handles multiple tool calls', async () => {
@@ -667,8 +665,8 @@ describe('OpenAIModel', () => {
       // Should emit stop events for both tool calls
       const stopEvents = events.filter((e) => 'modelContentBlockStopEvent' in e)
       expect(stopEvents).toHaveLength(2)
-      expect(stopEvents[0]).toEqual({ modelContentBlockStopEvent: {  } })
-      expect(stopEvents[1]).toEqual({ modelContentBlockStopEvent: {  } })
+      expect(stopEvents[0]).toEqual({ modelContentBlockStopEvent: {} })
+      expect(stopEvents[1]).toEqual({ modelContentBlockStopEvent: {} })
     })
 
     it('skips tool calls with invalid index', async () => {
@@ -751,7 +749,11 @@ describe('OpenAIModel', () => {
 
       // Extract and concatenate all tool input deltas
       const inputDeltas = events
-        .filter((e) => 'modelContentBlockDeltaEvent' in e && (e as any).modelContentBlockDeltaEvent.delta.type === 'toolUseInputDelta')
+        .filter(
+          (e) =>
+            'modelContentBlockDeltaEvent' in e &&
+            (e as any).modelContentBlockDeltaEvent.delta.type === 'toolUseInputDelta'
+        )
         .map((e) => (e as any).modelContentBlockDeltaEvent.delta.input)
 
       const reassembled = inputDeltas.join('')
@@ -805,7 +807,8 @@ describe('OpenAIModel', () => {
       expect((events[2] as any).modelContentBlockDeltaEvent.delta.text).toBe('Let me calculate ')
       // Tool events should follow
       const toolStartEvent = events.find(
-        (e) => 'modelContentBlockStartEvent' in e && (e as any).modelContentBlockStartEvent.start?.type === 'toolUseStart'
+        (e) =>
+          'modelContentBlockStartEvent' in e && (e as any).modelContentBlockStartEvent.start?.type === 'toolUseStart'
       )
       expect(toolStartEvent).toBeDefined()
       // Both text and tool blocks should have stop events
@@ -970,8 +973,8 @@ describe('OpenAIModel', () => {
       await collectIterator(
         provider.stream(messages, {
           systemPrompt: [
-            { type: 'textBlock', text: 'You are a helpful assistant' },
-            { type: 'textBlock', text: 'Additional context here' },
+            new TextBlock({ text: 'You are a helpful assistant' }),
+            new TextBlock({ text: 'Additional context here' }),
           ],
         })
       )
@@ -984,7 +987,10 @@ describe('OpenAIModel', () => {
     })
 
     it('formats array system prompt with cache points', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const warnings: string[] = []
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation((...args) => {
+        warnings.push(args[0])
+      })
       const captured: { request: any } = { request: null }
       const mockClient = createMockClientWithCapture(captured)
       const provider = new OpenAIModel({ modelId: 'gpt-4o', client: mockClient })
@@ -993,17 +999,15 @@ describe('OpenAIModel', () => {
       await collectIterator(
         provider.stream(messages, {
           systemPrompt: [
-            { type: 'textBlock', text: 'You are a helpful assistant' },
-            { type: 'textBlock', text: 'Large context document' },
-            { type: 'cachePointBlock', cacheType: 'default' },
+            new TextBlock({ text: 'You are a helpful assistant' }),
+            new TextBlock({ text: 'Large context document' }),
+            new CachePointBlock({ cacheType: 'default' }),
           ],
         })
       )
 
       // Verify warning was logged
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Cache points are not supported in OpenAI system prompts and will be ignored.'
-      )
+      expect(warnings).toContain('Cache points are not supported in OpenAI system prompts and will be ignored.')
 
       // Verify system message contains only text (cache points ignored)
       expect(captured.request).toBeDefined()
@@ -1040,7 +1044,7 @@ describe('OpenAIModel', () => {
 
       await collectIterator(
         provider.stream(messages, {
-          systemPrompt: [{ type: 'textBlock', text: 'You are a helpful assistant' }],
+          systemPrompt: [new TextBlock({ text: 'You are a helpful assistant' })],
         })
       )
 

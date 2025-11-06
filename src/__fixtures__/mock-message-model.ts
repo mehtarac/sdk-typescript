@@ -166,7 +166,7 @@ export class MockMessageModel extends Model<BaseModelConfig> {
    * Returns 'toolUse' if content contains any ToolUseBlock, otherwise 'endTurn'.
    */
   private _deriveStopReason(content: ContentBlock[]): string {
-    const hasToolUse = content.some((block) => 'toolUseBlock' in block)
+    const hasToolUse = content.some((block) => block.type === 'toolUseBlock')
     return hasToolUse ? 'toolUse' : 'endTurn'
   }
 
@@ -190,31 +190,29 @@ export class MockMessageModel extends Model<BaseModelConfig> {
   /**
    * Generates appropriate ModelStreamEvents for a content block.
    */
-  private async *_generateEventsForBlock(
-    block: ContentBlock,
-  ): AsyncGenerator<ModelStreamEventData> {
-    if ('textBlock' in block) {
-      yield { modelContentBlockStartEvent: {  } }
+  private async *_generateEventsForBlock(block: ContentBlock): AsyncGenerator<ModelStreamEventData> {
+    if (block.type === 'textBlock') {
+      yield { modelContentBlockStartEvent: {} }
       yield {
         modelContentBlockDeltaEvent: {
-          delta: { type: 'textDelta', text: block.textBlock.text },
+          delta: { type: 'textDelta', text: block.text },
         },
       }
-      yield { modelContentBlockStopEvent: {  } }
-    } else if ('toolUseBlock' in block) {
+      yield { modelContentBlockStopEvent: {} }
+    } else if (block.type === 'toolUseBlock') {
       yield {
         modelContentBlockStartEvent: {
-          start: { type: 'toolUseStart', name: block.toolUseBlock.name, toolUseId: block.toolUseBlock.toolUseId },
+          start: { type: 'toolUseStart', name: block.name, toolUseId: block.toolUseId },
         },
       }
       yield {
         modelContentBlockDeltaEvent: {
-          delta: { type: 'toolUseInputDelta', input: JSON.stringify(block.toolUseBlock.input) },
+          delta: { type: 'toolUseInputDelta', input: JSON.stringify(block.input) },
         },
       }
-      yield { modelContentBlockStopEvent: {  } }
-    } else if ('reasoningBlock' in block) {
-      yield { modelContentBlockStartEvent: {  } }
+      yield { modelContentBlockStopEvent: {} }
+    } else if (block.type === 'reasoningBlock') {
+      yield { modelContentBlockStartEvent: {} }
       // Build delta object with only defined properties
       const delta: {
         type: 'reasoningContentDelta'
@@ -224,26 +222,26 @@ export class MockMessageModel extends Model<BaseModelConfig> {
       } = {
         type: 'reasoningContentDelta',
       }
-      if (block.reasoningBlock.text !== undefined) {
-        delta.text = block.reasoningBlock.text
+      if (block.text !== undefined) {
+        delta.text = block.text
       }
-      if (block.reasoningBlock.signature !== undefined) {
-        delta.signature = block.reasoningBlock.signature
+      if (block.signature !== undefined) {
+        delta.signature = block.signature
       }
-      if (block.reasoningBlock.redactedContent !== undefined) {
-        delta.redactedContent = block.reasoningBlock.redactedContent
+      if (block.redactedContent !== undefined) {
+        delta.redactedContent = block.redactedContent
       }
       yield {
         modelContentBlockDeltaEvent: {
           delta,
         },
       }
-      yield { modelContentBlockStopEvent: {  } }
-    } else if ('cachePointBlock' in block) {
+      yield { modelContentBlockStopEvent: {} }
+    } else if (block.type === 'cachePointBlock') {
       // CachePointBlock doesn't generate delta events
-      yield { modelContentBlockStartEvent: {  } }
-      yield { modelContentBlockStopEvent: {  } }
-    } else if ('toolResultBlock' in block) {
+      yield { modelContentBlockStartEvent: {} }
+      yield { modelContentBlockStopEvent: {} }
+    } else if (block.type === 'toolResultBlock') {
       // ToolResultBlock appears in user messages and doesn't generate model events
       // This shouldn't normally be in assistant messages, but we'll handle it gracefully
     } else {

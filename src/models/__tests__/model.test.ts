@@ -11,8 +11,7 @@ describe('Model', () => {
             modelMessageStartEvent: { role: 'assistant' },
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -20,8 +19,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'endTurn' },
@@ -73,8 +71,7 @@ describe('Model', () => {
             modelMessageStartEvent: { role: 'assistant' },
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -82,12 +79,10 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -95,8 +90,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'endTurn' },
@@ -112,8 +106,8 @@ describe('Model', () => {
 
         const { items, result } = await collectGenerator(provider.streamAggregated(messages))
 
-        expect(items).toContainEqual({ textBlock: expect.objectContaining({ type: 'textBlock', text: 'First' }) })
-        expect(items).toContainEqual({ textBlock: expect.objectContaining({ type: 'textBlock', text: 'Second' }) })
+        expect(items).toContainEqual(expect.objectContaining({ type: 'textBlock', text: 'First' }))
+        expect(items).toContainEqual(expect.objectContaining({ type: 'textBlock', text: 'Second' }))
 
         expect(result).toEqual({
           message: {
@@ -151,8 +145,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'toolUse' },
@@ -168,14 +161,14 @@ describe('Model', () => {
 
         const { items, result } = await collectGenerator(provider.streamAggregated(messages))
 
-        expect(items).toContainEqual({
-          toolUseBlock: expect.objectContaining({
+        expect(items).toContainEqual(
+          expect.objectContaining({
             type: 'toolUseBlock',
             toolUseId: 'tool1',
             name: 'get_weather',
             input: { location: 'Paris' },
-          }),
-        })
+          })
+        )
 
         expect(result).toEqual({
           message: {
@@ -202,8 +195,7 @@ describe('Model', () => {
             modelMessageStartEvent: { role: 'assistant' },
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -216,8 +208,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'endTurn' },
@@ -233,13 +224,13 @@ describe('Model', () => {
 
         const { items, result } = await collectGenerator(provider.streamAggregated(messages))
 
-        expect(items).toContainEqual({
-          reasoningBlock: expect.objectContaining({
+        expect(items).toContainEqual(
+          expect.objectContaining({
             type: 'reasoningBlock',
             text: 'Thinking about the problem',
             signature: 'sig1',
-          }),
-        })
+          })
+        )
 
         expect(result).toEqual({
           message: {
@@ -263,8 +254,7 @@ describe('Model', () => {
             modelMessageStartEvent: { role: 'assistant' },
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -272,8 +262,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'endTurn' },
@@ -289,12 +278,12 @@ describe('Model', () => {
 
         const { items, result } = await collectGenerator(provider.streamAggregated(messages))
 
-        expect(items).toContainEqual({
-          reasoningBlock: expect.objectContaining({
+        expect(items).toContainEqual(
+          expect.objectContaining({
             type: 'reasoningBlock',
             redactedContent: new Uint8Array(0),
-          }),
-        })
+          })
+        )
 
         expect(result).toEqual({
           message: {
@@ -317,8 +306,7 @@ describe('Model', () => {
             modelMessageStartEvent: { role: 'assistant' },
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -326,8 +314,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'endTurn' },
@@ -343,12 +330,12 @@ describe('Model', () => {
 
         const { items, result } = await collectGenerator(provider.streamAggregated(messages))
 
-        expect(items).toContainEqual({
-          reasoningBlock: expect.objectContaining({
+        expect(items).toContainEqual(
+          expect.objectContaining({
             type: 'reasoningBlock',
             text: 'Thinking',
-          }),
-        })
+          })
+        )
 
         expect(result).toEqual({
           message: {
@@ -373,8 +360,7 @@ describe('Model', () => {
             modelMessageStartEvent: { role: 'assistant' },
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -382,8 +368,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelContentBlockStartEvent: {
@@ -396,12 +381,10 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
-            modelContentBlockStartEvent: {
-            },
+            modelContentBlockStartEvent: {},
           }
           yield {
             modelContentBlockDeltaEvent: {
@@ -409,8 +392,7 @@ describe('Model', () => {
             },
           }
           yield {
-            modelContentBlockStopEvent: {
-            },
+            modelContentBlockStopEvent: {},
           }
           yield {
             modelMessageStopEvent: { stopReason: 'endTurn' },
@@ -422,22 +404,22 @@ describe('Model', () => {
           }
         })
 
-        const messages: Message[] = [new Message({ role: 'user', content: [new TextBlock({ text: 'Hi' })]})]
+        const messages: Message[] = [new Message({ role: 'user', content: [new TextBlock({ text: 'Hi' })] })]
 
         const { items, result } = await collectGenerator(provider.streamAggregated(messages))
 
-        expect(items).toContainEqual({ textBlock: expect.objectContaining({ type: 'textBlock', text: 'Hello' }) })
-        expect(items).toContainEqual({
-          toolUseBlock: expect.objectContaining({
+        expect(items).toContainEqual(expect.objectContaining({ type: 'textBlock', text: 'Hello' }))
+        expect(items).toContainEqual(
+          expect.objectContaining({
             type: 'toolUseBlock',
             toolUseId: 'tool1',
             name: 'get_weather',
             input: { city: 'Paris' },
-          }),
-        })
-        expect(items).toContainEqual({
-          reasoningBlock: expect.objectContaining({ type: 'reasoningBlock', text: 'Reasoning', signature: 'sig1' }),
-        })
+          })
+        )
+        expect(items).toContainEqual(
+          expect.objectContaining({ type: 'reasoningBlock', text: 'Reasoning', signature: 'sig1' })
+        )
 
         expect(result).toEqual({
           message: {

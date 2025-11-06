@@ -414,9 +414,9 @@ export class OpenAIModel extends Model<OpenAIModelConfig> {
         for (const block of options.systemPrompt) {
           if (typeof block === 'string') {
             textBlocks.push(block)
-          } else if ('textBlock' in block) {
-            textBlocks.push(block.textBlock.text)
-          } else if ('cachePointBlock' in block) {
+          } else if (block.type === 'textBlock') {
+            textBlocks.push(block.text)
+          } else if (block.type === 'cachePointBlock') {
             hasCachePoints = true
           }
         }
@@ -705,8 +705,7 @@ export class OpenAIModel extends Model<OpenAIModelConfig> {
       if (!streamState.textContentBlockStarted) {
         streamState.textContentBlockStarted = true
         events.push({
-          modelContentBlockStartEvent: {
-          },
+          modelContentBlockStartEvent: {},
         })
       }
 
@@ -763,8 +762,7 @@ export class OpenAIModel extends Model<OpenAIModelConfig> {
       // Emit stop event for text content if it was started
       if (streamState.textContentBlockStarted) {
         events.push({
-          modelContentBlockStopEvent: {
-          },
+          modelContentBlockStopEvent: {},
         })
         streamState.textContentBlockStarted = false
       }
@@ -772,8 +770,7 @@ export class OpenAIModel extends Model<OpenAIModelConfig> {
       // Emit stop events for all active tool calls and delete during iteration
       for (const [index] of activeToolCalls) {
         events.push({
-          modelContentBlockStopEvent: {
-          },
+          modelContentBlockStopEvent: {},
         })
         activeToolCalls.delete(index)
       }

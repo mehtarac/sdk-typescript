@@ -80,7 +80,6 @@ export class ModelMessageStartEvent implements ModelMessageStartEventData {
  * Data for a content block start event.
  */
 export interface ModelContentBlockStartEventData {
-
   /**
    * Information about the content block being started.
    * Only present for tool use blocks.
@@ -96,7 +95,6 @@ export class ModelContentBlockStartEvent implements ModelContentBlockStartEventD
    * Discriminator for content block start events.
    */
   readonly type = 'modelContentBlockStartEvent' as const
-
 
   /**
    * Information about the content block being started.
@@ -115,6 +113,10 @@ export class ModelContentBlockStartEvent implements ModelContentBlockStartEventD
  * Data for a content block delta event.
  */
 export interface ModelContentBlockDeltaEventData {
+  /**
+   * Index of the content block being updated.
+   */
+  contentBlockIndex?: number
 
   /**
    * The incremental content update.
@@ -152,8 +154,8 @@ export class ModelContentBlockDeltaEvent implements ModelContentBlockDeltaEventD
 /**
  * Data for a content block stop event.
  */
-export interface ModelContentBlockStopEventData {
-}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ModelContentBlockStopEventData {}
 
 /**
  * Event emitted when a content block completes.
@@ -169,8 +171,7 @@ export class ModelContentBlockStopEvent implements ModelContentBlockStopEventDat
    */
   readonly contentBlockIndex?: number
 
-  constructor(data: ModelContentBlockStopEventData) {
-  }
+  constructor(_data: ModelContentBlockStopEventData) {}
 }
 
 /**

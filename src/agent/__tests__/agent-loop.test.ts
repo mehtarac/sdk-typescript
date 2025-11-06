@@ -6,21 +6,22 @@ import { createMockTool } from '../../__fixtures__/tool-helpers.js'
 import { ToolRegistry } from '../../tools/registry.js'
 import { TextBlock, type Message } from '../../types/messages.js'
 import { MaxTokensError } from '../../errors.js'
+import type { ModelStreamEventData } from '../../models/streaming.js'
 
 describe('runAgentLoop', () => {
   describe('when handling simple completion without tools', () => {
     it('yields events and returns final messages array', async () => {
       const provider = new TestModelProvider(async function* () {
-        yield { modelMessageStartEvent: { role: 'assistant' } }
-        yield { modelContentBlockStartEvent: { contentBlockIndex: 0 } }
+        yield { modelMessageStartEvent: { role: 'assistant' } } as ModelStreamEventData
+        yield { modelContentBlockStartEvent: { contentBlockIndex: 0 } } as ModelStreamEventData
         yield {
           modelContentBlockDeltaEvent: {
             delta: { type: 'textDelta', text: 'Hello, how can I help?' },
             contentBlockIndex: 0,
           },
-        }
-        yield { modelContentBlockStopEvent: { contentBlockIndex: 0 } }
-        yield { modelMessageStopEvent: { stopReason: 'endTurn' } }
+        } as ModelStreamEventData
+        yield { modelContentBlockStopEvent: { contentBlockIndex: 0 } } as ModelStreamEventData
+        yield { modelMessageStopEvent: { stopReason: 'endTurn' } } as ModelStreamEventData
       })
 
       const registry = new ToolRegistry()
@@ -45,17 +46,17 @@ describe('runAgentLoop', () => {
       expect(items).toContainEqual({ type: 'afterInvocationEvent' })
 
       // Verify model events are passed through
-      expect(items).toContainEqual(
-        expect.objectContaining({ type: 'modelMessageStartEvent', role: 'assistant' })
-      )
+      expect(items).toContainEqual(expect.objectContaining({ type: 'modelMessageStartEvent', role: 'assistant' }))
 
       // Verify final messages array contains assistant response
       expect(messages).toHaveLength(2)
-      expect(messages[1]).toEqual({
-        type: 'message',
-        role: 'assistant',
-        content: [{ textBlock: expect.objectContaining({ type: 'textBlock', text: 'Hello, how can I help?' }) }],
-      })
+      expect(messages[1]).toEqual(
+        expect.objectContaining({
+          type: 'message',
+          role: 'assistant',
+          content: [expect.objectContaining({ type: 'textBlock', text: 'Hello, how can I help?' })],
+        })
+      )
     })
   })
 
@@ -291,7 +292,7 @@ describe('runAgentLoop', () => {
       // For error after first event, we need to use TestModelProvider since TestMessageModelProvider
       // throws errors before any events are generated
       const provider = new TestModelProvider(async function* () {
-        yield { modelMessageStartEvent:{ role: 'assistant' }}
+        yield { modelMessageStartEvent: { role: 'assistant' } } as ModelStreamEventData
         throw new Error('Error after first event')
       })
 

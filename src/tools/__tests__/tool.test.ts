@@ -692,9 +692,9 @@ describe('FunctionTool', () => {
           status: 'error',
           content: [
             expect.objectContaining({
-                type: 'textBlock',
-                text: 'Error: string error',
-              }),
+              type: 'textBlock',
+              text: 'Error: string error',
+            }),
           ],
           error: expect.any(Error),
         })
@@ -735,9 +735,9 @@ describe('FunctionTool', () => {
           status: 'error',
           content: [
             expect.objectContaining({
-                type: 'textBlock',
-                text: 'Error: Custom error message',
-              }),
+              type: 'textBlock',
+              text: 'Error: Custom error message',
+            }),
           ],
           error: customError,
         })
@@ -767,9 +767,9 @@ describe('FunctionTool', () => {
           status: 'error',
           content: [
             expect.objectContaining({
-                type: 'textBlock',
-                text: 'Error: Error with stack',
-              }),
+              type: 'textBlock',
+              text: 'Error: Error with stack',
+            }),
           ],
           error: expect.any(Error),
         })
@@ -807,9 +807,9 @@ describe('FunctionTool', () => {
           status: 'error',
           content: [
             expect.objectContaining({
-                type: 'textBlock',
-                text: 'Error: Async generator error',
-              }),
+              type: 'textBlock',
+              text: 'Error: Async generator error',
+            }),
           ],
           error: testError,
         })
@@ -923,9 +923,9 @@ describe('FunctionTool', () => {
           status: 'success',
           content: [
             expect.objectContaining({
-                type: 'jsonBlock',
-                json: {},
-              }),
+              type: 'jsonBlock',
+              json: {},
+            }),
           ],
         })
       })

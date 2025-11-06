@@ -35,13 +35,7 @@ export type {
 } from './types/messages.js'
 
 // Tool types
-export type {
-  ToolSpec,
-  ToolUse,
-  ToolResultStatus,
-  ToolResult,
-  ToolChoice,
-} from './tools/types.js'
+export type { ToolSpec, ToolUse, ToolResultStatus, ToolResult, ToolChoice } from './tools/types.js'
 
 // Tool interface and related types
 export type { Tool, InvokableTool, ToolContext, ToolStreamEvent, ToolStreamGenerator } from './tools/tool.js'

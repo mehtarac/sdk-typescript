@@ -103,7 +103,7 @@ export abstract class Model<T extends BaseModelConfig> {
     } else if ('modelContentBlockStartEvent' in event_data) {
       return new ModelContentBlockStartEvent(event_data.modelContentBlockStartEvent)
     } else if ('modelContentBlockDeltaEvent' in event_data) {
-      return new ModelContentBlockDeltaEvent()
+      return new ModelContentBlockDeltaEvent(event_data.modelContentBlockDeltaEvent)
     } else if ('modelContentBlockStopEvent' in event_data) {
       return new ModelContentBlockStopEvent(event_data.modelContentBlockStopEvent)
     } else if ('modelMessageStopEvent' in event_data) {
@@ -191,21 +191,18 @@ export abstract class Model<T extends BaseModelConfig> {
             // Finalize and emit complete ContentBlock
             let block: ContentBlock
             if (toolUseId) {
-              const toolUseBlock = new ToolUseBlock({
+              block = new ToolUseBlock({
                 name: toolName,
                 toolUseId: toolUseId,
                 input: JSON.parse(accumulatedToolInput),
               })
-              block = { toolUseBlock }
 
               toolUseId = '' // Reset
               toolName = ''
             } else if (Object.keys(accumulatedReasoning).length > 0) {
-              const reasoningBlock = new ReasoningBlock(accumulatedReasoning)
-              block = { reasoningBlock }
+              block = new ReasoningBlock(accumulatedReasoning)
             } else {
-              const textBlock = new TextBlock({ text: accumulatedText })
-              block = { textBlock }
+              block = new TextBlock({ text: accumulatedText })
             }
             contentBlocks.push(block)
             yield block

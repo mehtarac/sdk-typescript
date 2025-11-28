@@ -1,14 +1,26 @@
 /**
- * Helper to load fixture files from Vite URL imports using fetch().
- * Works in both Node.js (20+) and browser environments.
- * Vite ?url imports return paths that can be fetched directly.
+ * Helper to load fixture files from Vite URL imports.
+ * Works in both Node.js and browser environments with a unified async API.
+ * 
+ * In browsers: Uses fetch() with Vite dev server URLs
+ * In Node.js: Falls back to fs due to fetch() not supporting file:// protocol
  *
  * @param url - The URL from a Vite ?url import
  * @returns Promise resolving to the file contents as a Uint8Array
  */
 export const loadFixture = async (url: string): Promise<Uint8Array> => {
-  const arrayBuffer = await fetch(url).then((b) => b.arrayBuffer())
-  return new Uint8Array(arrayBuffer)
+  // Check if URL is an HTTP URL (browser with Vite dev server)
+  if (url.startsWith('http')) {
+    const arrayBuffer = await fetch(url).then((b) => b.arrayBuffer())
+    return new Uint8Array(arrayBuffer)
+  }
+  
+  // Node.js: Use file system (fetch() doesn't support file:// yet)
+  const { readFileSync } = await import('node:fs')
+  const { join } = await import('node:path')
+  const relativePath = url.startsWith('/') ? url.slice(1) : url
+  const filePath = join(process.cwd(), relativePath)
+  return new Uint8Array(readFileSync(filePath))
 }
 
 /**

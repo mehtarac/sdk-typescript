@@ -89,7 +89,7 @@ runs:
         role-session-name: GitHubActions-StrandsAgent-${{ github.run_id }}
         aws-region: us-west-2
         mask-aws-account-id: true
-        inline_session_policy: >-
+        inline-session-policy: >-
           {
             "Version": "2012-10-17",
             "Statement": [

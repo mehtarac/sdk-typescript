@@ -71,7 +71,7 @@ function buildPrompts(mode, issueId, isPullRequest, command, branchName, inputs)
     'implementer': '.github/agent-sops/task-implementer.sop.md',
     'refiner': '.github/agent-sops/task-refiner.sop.md',
     'release-notes': '.github/agent-sops/task-release-notes.sop.md',
-    'reviewer': '.github/agent-sops/task-reviwer.sop.md'
+    'reviewer': '.github/agent-sops/task-reviewer.sop.md'
   };
   
   const scriptFile = scriptFiles[mode] || scriptFiles['refiner'];

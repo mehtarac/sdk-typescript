@@ -27,7 +27,7 @@ Understand what the PR is trying to accomplish and gather relevant context.
 - You MUST understand the acceptance criteria being addressed
 - You MUST note any special considerations mentioned in the PR description
 - You MUST check for any existing review comments to avoid duplication
-- You MUST review the files changed and understand the scope of modifications
+- You MUST use the `get_pr_files` tool to review the files changed and understand the scope of modifications
 
 ### 3. Review Repository Guidelines
 
@@ -157,7 +157,9 @@ Add the review comments to the pull request.
 
 **Constraints:**
 - You MUST post comments on specific lines where issues are identified
+- You MUST use the `add_pr_inline_comment` tool for line-specific feedback on code
 - You MUST use the `reply_to_review_comment` tool for line-specific feedback
+- You MUST use the `add_issue_comment` tool for general PR-level comments
 - You MUST group related comments when possible
 - You MUST avoid overwhelming the author with too many minor comments
 - You MUST prioritize the most important feedback

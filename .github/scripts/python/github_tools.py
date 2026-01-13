@@ -453,49 +453,42 @@ def reply_to_review_comment(pr_number: int, comment_id: int, reply_text: str, re
 @tool
 @log_inputs
 @check_should_call_write_api_or_record
-def create_pr_review(pr_number: int, body: str = "", event: str = "COMMENT", comments: list = None, repo: str | None = None) -> str:
-    """Creates a pull request review with optional line-specific comments.
+def add_pr_inline_comment(pr_number: int, path: str, line: int, body: str, repo: str | None = None) -> str:
+    """Adds an inline comment to a specific line in a pull request file.
 
     Args:
         pr_number: The pull request number
-        body: The overall review comment body (optional)
-        event: The review event type - "APPROVE", "REQUEST_CHANGES", or "COMMENT" (default: "COMMENT")
-        comments: List of line-specific comments, each with keys: path, line, body (optional)
+        path: The file path to comment on
+        line: The line number to comment on
+        body: The comment text
         repo: GitHub repository in the format "owner/repo" (optional; falls back to env var)
 
     Returns:
         Result of the operation
-    
-    Example comments format:
-    [
-        {
-            "path": "src/example.ts",
-            "line": 42,
-            "body": "Consider using a more descriptive variable name here."
-        }
-    ]
     """
-    if event not in ["APPROVE", "REQUEST_CHANGES", "COMMENT"]:
-        return f"Error: Invalid event type '{event}'. Must be APPROVE, REQUEST_CHANGES, or COMMENT"
+    # Get the latest commit SHA for the PR
+    pr_result = _github_request("GET", f"pulls/{pr_number}", repo)
+    if isinstance(pr_result, str):
+        console.print(Panel(escape(pr_result), title="[bold red]Error", border_style="red"))
+        return pr_result
     
-    review_data = {
-        "event": event
+    commit_sha = pr_result['head']['sha']
+    
+    comment_data = {
+        "body": body,
+        "commit_id": commit_sha,
+        "path": path,
+        "line": line
     }
     
-    if body:
-        review_data["body"] = body
-    
-    if comments:
-        review_data["comments"] = comments
-    
-    result = _github_request("POST", f"pulls/{pr_number}/reviews", repo, review_data)
+    result = _github_request("POST", f"pulls/{pr_number}/comments", repo, comment_data)
     if isinstance(result, str):
         console.print(Panel(escape(result), title="[bold red]Error", border_style="red"))
         return result
 
-    message = f"PR review created: {result['html_url']}"
-    review_details = f"Event: {event}\nBody: {body or 'No general comment'}\nLine comments: {len(comments) if comments else 0}\nURL: {result['html_url']}"
-    console.print(Panel(escape(review_details), title="[bold green]✅ Review Created", border_style="green"))
+    message = f"Inline comment added: {result['html_url']}"
+    comment_details = f"File: {path}:{line}\nComment: {body}\nURL: {result['html_url']}"
+    console.print(Panel(escape(comment_details), title="[bold green]✅ Inline Comment Added", border_style="green"))
     return message
 
 

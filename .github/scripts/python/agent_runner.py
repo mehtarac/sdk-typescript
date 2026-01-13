@@ -20,9 +20,9 @@ from strands_tools import http_request, shell
 # Import local GitHub tools we need
 from github_tools import (
     add_issue_comment,
+    add_pr_inline_comment,
     create_issue,
     create_pull_request,
-    create_pr_review,
     get_issue,
     get_issue_comments,
     get_pull_request,
@@ -74,7 +74,7 @@ def _get_all_tools() -> list[Any]:
         get_pr_files,
         get_pr_review_and_comments,
         reply_to_review_comment,
-        create_pr_review,
+        add_pr_inline_comment,
         
         # Agent tools
         notebook,

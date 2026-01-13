@@ -23,7 +23,7 @@ from github_tools import (
     create_pull_request,
     update_pull_request,
     reply_to_review_comment,
-    create_pr_review,
+    add_pr_inline_comment,
 )
 
 # Configure structured logging
@@ -44,7 +44,7 @@ def get_function_mapping() -> Dict[str, Any]:
         create_pull_request.tool_name: create_pull_request,
         update_pull_request.tool_name: update_pull_request,
         reply_to_review_comment.tool_name: reply_to_review_comment,
-        create_pr_review.tool_name: create_pr_review,
+        add_pr_inline_comment.tool_name: add_pr_inline_comment,
     }
 
 

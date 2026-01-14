@@ -31,6 +31,7 @@ Checkout the PR branch and understand what the PR is trying to accomplish.
 - You MUST note any special considerations mentioned in the PR description
 - You MUST check for any existing review comments to avoid duplication
 - You MUST use the `get_pr_files` tool to review the files changed and understand the scope of modifications
+- You SHOULD flag if the PR is too large (>400 lines changed) and suggest breaking it into smaller PRs
 - You MUST check for duplicate functionality by searching the codebase:
   - For newly added tests, check if similar tests already exist
   - For new helper functions, verify they aren't already implemented elsewhere
@@ -56,10 +57,13 @@ Examine the code for quality, readability, and maintainability issues.
 
 **Constraints:**
 - You MUST check for language-specific best practices as defined in repository guidelines
+- You MUST verify code is readable with clear variable/function names and logical structure
+- You MUST check that code is maintainable with modular design and loose coupling
 - You MUST check for code complexity and suggest simplifications
 - You MUST identify unclear or confusing code patterns
 - You MUST verify proper error handling
 - You MUST check for potential performance issues
+- You MUST verify design decisions are documented (why certain patterns were chosen, alternatives considered, tradeoffs made)
 
 #### 3.3 Testing Review
 
@@ -92,12 +96,15 @@ Create specific, actionable review comments for identified issues.
 - You MUST focus on the most impactful improvements first
 - You MUST provide specific suggestions rather than vague feedback
 - You MUST be concise in your feedback
+- You MUST avoid nitpicking on minor style issues (nits) - focus on substantive problems:
+  - Nits include: comment wording, code organization preferences, bracket/semicolon position, filename conventions
+  - Substantive issues include: bugs, security vulnerabilities, performance problems, maintainability concerns
+- You MUST assume positive intent from the code author
 - You MUST categorize feedback as:
   - **Critical**: Must be fixed (security, breaking changes, major bugs)
   - **Important**: Should be fixed (quality, maintainability, standards)
   - **Suggestion**: Nice to have (optimizations, style preferences)
 - You MUST be constructive and educational in your feedback
-- You MUST avoid nitpicking on minor style issues if they don't impact functionality
 - You MUST prioritize feedback that helps the developer learn and improve
 - You MAY skip this step if you have no feedback to provide
 
@@ -152,12 +159,16 @@ Provide a concise overall summary of the review.
 
 ### Code Quality Priorities
 
-1. **Error Handling**: Verify robust error handling and edge cases
-2. **Performance**: Identify potential performance bottlenecks
-3. **Security**: Check for security vulnerabilities or data exposure
-4. **Maintainability**: Ensure code is readable and maintainable
-5. **Testing**: Verify comprehensive test coverage and quality
-6. **Language Best Practices**: Follow language-specific best practices as defined in repository guidelines
+Focus on substantive issues that impact code quality, not stylistic preferences:
+
+1. **Functionality**: Does the code work as intended? Are edge cases and error conditions handled?
+2. **Readability**: Is the code clear with descriptive names and logical structure?
+3. **Maintainability**: Is the code modular, loosely coupled, and easy to modify in the future?
+4. **Security**: Are there vulnerabilities or data exposure risks?
+5. **Performance**: Are there bottlenecks or inefficient algorithms?
+6. **Testing**: Is there comprehensive test coverage including edge cases?
+7. **Language Best Practices**: Does it follow language-specific best practices as defined in repository guidelines?
+8. **Design Documentation**: Are design decisions, alternatives, and tradeoffs documented?
 
 ## Best Practices
 
@@ -170,10 +181,12 @@ Provide a concise overall summary of the review.
 
 ### Communication
 - Be respectful and professional
+- Assume positive intent from the code author
 - Acknowledge good practices
 - Explain the reasoning behind feedback
 - Provide learning opportunities
 - Encourage the developer
+- Focus on ideas for improving the system, not criticisms of the author
 
 ### Quality Gates
 - Ensure critical issues are marked as blocking

@@ -453,19 +453,31 @@ def reply_to_review_comment(pr_number: int, comment_id: int, reply_text: str, re
 @tool
 @log_inputs
 @check_should_call_write_api_or_record
-def add_pr_inline_comment(pr_number: int, path: str, line: int, body: str, repo: str | None = None) -> str:
-    """Adds an inline comment to a specific line in a pull request file.
+def add_pr_comment(pr_number: int, body: str, path: str | None = None, line: int | None = None, repo: str | None = None) -> str:
+    """Adds a comment to a pull request - either inline on a specific line, file-level, or general PR comment.
 
     Args:
         pr_number: The pull request number
-        path: The file path to comment on
-        line: The line number to comment on
         body: The comment text
+        path: The file path to comment on (optional; if omitted, creates general PR comment)
+        line: The line number to comment on (optional; if omitted with path, creates file-level comment)
         repo: GitHub repository in the format "owner/repo" (optional; falls back to env var)
 
     Returns:
         Result of the operation
     """
+    # If no path provided, create a general PR comment (issue comment)
+    if path is None:
+        result = _github_request("POST", f"issues/{pr_number}/comments", repo, {"body": body})
+        if isinstance(result, str):
+            console.print(Panel(escape(result), title="[bold red]Error", border_style="red"))
+            return result
+        
+        message = f"PR comment added: {result['html_url']}"
+        console.print(Panel(escape(f"Comment: {body}\nURL: {result['html_url']}"), 
+                           title="[bold green]✅ PR Comment Added", border_style="green"))
+        return message
+    
     # Get the latest commit SHA for the PR
     pr_result = _github_request("GET", f"pulls/{pr_number}", repo)
     if isinstance(pr_result, str):
@@ -474,21 +486,27 @@ def add_pr_inline_comment(pr_number: int, path: str, line: int, body: str, repo:
     
     commit_sha = pr_result['head']['sha']
     
+    # Create inline or file-level comment
     comment_data = {
         "body": body,
         "commit_id": commit_sha,
-        "path": path,
-        "line": line
+        "path": path
     }
+    
+    # Add line number if provided (inline comment), otherwise it's a file-level comment
+    if line is not None:
+        comment_data["line"] = line
     
     result = _github_request("POST", f"pulls/{pr_number}/comments", repo, comment_data)
     if isinstance(result, str):
         console.print(Panel(escape(result), title="[bold red]Error", border_style="red"))
         return result
 
-    message = f"Inline comment added: {result['html_url']}"
-    comment_details = f"File: {path}:{line}\nComment: {body}\nURL: {result['html_url']}"
-    console.print(Panel(escape(comment_details), title="[bold green]✅ Inline Comment Added", border_style="green"))
+    comment_type = "Inline" if line else "File-level"
+    location = f"{path}:{line}" if line else path
+    message = f"{comment_type} comment added: {result['html_url']}"
+    comment_details = f"Location: {location}\nComment: {body}\nURL: {result['html_url']}"
+    console.print(Panel(escape(comment_details), title=f"[bold green]✅ {comment_type} Comment Added", border_style="green"))
     return message
 
 
